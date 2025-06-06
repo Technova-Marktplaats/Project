@@ -19,7 +19,7 @@ const fetchItem = async () => {
   error.value = null
   
   try {
-    const response = await axios.get(`http://marktplaats-backend.test/api/items/${props.id}`, {
+    const response = await axios.get(`http://srv856957.hstgr.cloud/api/items/${props.id}`, {
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
