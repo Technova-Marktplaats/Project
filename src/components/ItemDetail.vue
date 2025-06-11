@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import axios from 'axios'
+import apiService from '../services/api'
 
 const route = useRoute()
 const router = useRouter()
@@ -19,16 +19,20 @@ const fetchItem = async () => {
   error.value = null
   
   try {
-    const response = await axios.get(`http://srv856957.hstgr.cloud/mp/api/items/${props.id}`, {
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-      },
-      timeout: 10000,
-    })
-    
+    const response = await apiService.items.getById(props.id)
     console.log('Item Response:', response.data)
-    item.value = response.data
+    
+    // Check if response has wrapper structure (success, data, message)
+    if (response.data.data && typeof response.data.data === 'object') {
+      item.value = response.data.data
+    } else if (response.data.id) {
+      // Direct object response
+      item.value = response.data
+    } else {
+      console.error('Unexpected response structure:', response.data)
+      error.value = 'Onverwachte response structuur'
+      return
+    }
   } catch (err) {
     console.error('Fout bij ophalen item:', err)
     
@@ -114,7 +118,7 @@ onMounted(() => {
             <div class="details-grid">
               <div class="detail-item">
                 <strong>Categorie:</strong>
-                <span>{{ item.category || 'Niet opgegeven' }}</span>
+                <span>{{ item.category.name || 'Niet opgegeven' }}</span>
               </div>
               <div class="detail-item">
                 <strong>Aangemaakt:</strong>

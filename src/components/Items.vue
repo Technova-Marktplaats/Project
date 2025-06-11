@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import axios from 'axios'
+import apiService from '../services/api'
 
 const router = useRouter()
 
@@ -14,16 +14,18 @@ const fetchItems = async () => {
   error.value = null
   
   try {
-    const response = await axios.get('http://srv856957.hstgr.cloud/mp/api/items', {
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-      },
-      timeout: 10000, // 10 seconden timeout
-    })
-    
+    const response = await apiService.items.getAll()
     console.log('API Response:', response.data)
-    items.value = response.data
+    
+    // Check if response has wrapper structure (success, data, message)
+    if (response.data.data && Array.isArray(response.data.data)) {
+      items.value = response.data.data
+    } else if (Array.isArray(response.data)) {
+      items.value = response.data
+    } else {
+      console.error('Unexpected response structure:', response.data)
+      items.value = []
+    }
   } catch (err) {
     console.error('Volledige fout:', err)
     console.error('Response data:', err.response?.data)
@@ -35,7 +37,7 @@ const fetchItems = async () => {
     } else if (err.code === 'ECONNABORTED') {
       error.value = 'Verzoek time-out: De server reageert niet binnen 10 seconden.'
     } else if (err.message.includes('Network Error')) {
-      error.value = 'Netwerk fout: Controleer of je Laravel server draait op marktplaats-backend.test'
+      error.value = 'Netwerk fout: Controleer of je Laravel server draait'
     } else {
       error.value = 'Er is een fout opgetreden bij het ophalen van de gegevens: ' + (err.response?.data?.message || err.message)
     }
@@ -67,9 +69,14 @@ const navigateToItem = (itemId) => {
   <div class="items-container">
     <div class="header">
       <h2>Items Overzicht</h2>
-      <button @click="fetchItems" :disabled="loading" class="refresh-btn">
-        {{ loading ? 'Laden...' : 'Vernieuwen' }}
-      </button>
+      <div class="header-actions">
+        <button @click="$router.push('/add-item')" class="add-item-btn">
+          + Nieuw Item
+        </button>
+        <button @click="fetchItems" :disabled="loading" class="refresh-btn">
+          {{ loading ? 'Laden...' : 'Vernieuwen' }}
+        </button>
+      </div>
     </div>
 
     <div v-if="loading" class="loading">
@@ -109,7 +116,7 @@ const navigateToItem = (itemId) => {
           <h3>{{ item.title || 'Onbekend Item' }}</h3>
           <p v-if="item.description" class="description">{{ item.description }}</p>
           <div class="item-details">
-            <span v-if="item.category" class="category">{{ item.category }}</span>
+            <span v-if="item.category" class="category">{{ item.category.name }}</span>
             <span class="availability" :class="{ 'available': item.available, 'unavailable': !item.available }">
               {{ item.available ? 'Beschikbaar' : 'Niet beschikbaar' }}
             </span>
@@ -137,11 +144,34 @@ const navigateToItem = (itemId) => {
   margin-bottom: 30px;
   padding-bottom: 15px;
   border-bottom: 2px solid #e2e8f0;
+  flex-wrap: wrap;
+  gap: 15px;
 }
 
 .header h2 {
   color: #2d3748;
   margin: 0;
+}
+
+.header-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.add-item-btn {
+  background: #4299e1;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.add-item-btn:hover {
+  background: #3182ce;
 }
 
 .refresh-btn {
@@ -310,5 +340,24 @@ const navigateToItem = (itemId) => {
 .unavailable {
   background: #fef2f2;
   color: #b91c1c;
+}
+
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+  }
+  
+  .header-actions {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  
+  .add-item-btn,
+  .refresh-btn {
+    flex: 1;
+    min-width: 120px;
+  }
 }
 </style>
