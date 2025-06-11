@@ -1,0 +1,37 @@
+/*
+This style sheet is purely for the nav bar to not get it confused with the
+main style sheet where all the other components will be stylized.
+
+*/
+
+nav {
+    background-color: white;
+    box-shadow: 4px 4px 4px 4px;
+    color: black;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 150px;
+    padding: 0 20px;
+}
+
+.nav-left {
+    display: flex;
+    align-items: center;
+}
+
+.logo {
+    width: 8%;
+    margin-right: 20px;
+}
+
+.nav-home {
+    display: flex;
+    align-items: center;
+}
+
+.nav-right {
+    display: flex;
+    align-items: center;
+    gap: 30px;
+}
