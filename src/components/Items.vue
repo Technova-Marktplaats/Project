@@ -70,6 +70,10 @@ const navigateToItem = (itemId) => {
     <div class="header">
       <h2>Items Overzicht</h2>
       <div class="header-actions">
+        <button @click="$router.push('/my-items')" class="my-items-btn">
+          <i class="fas fa-user"></i>
+          Mijn Items
+        </button>
         <button @click="$router.push('/add-item')" class="add-item-btn">
           + Nieuw Item
         </button>
@@ -157,6 +161,24 @@ const navigateToItem = (itemId) => {
   display: flex;
   gap: 10px;
   align-items: center;
+}
+
+.my-items-btn {
+  background: #38a169;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.my-items-btn:hover {
+  background: #2f855a;
 }
 
 .add-item-btn {

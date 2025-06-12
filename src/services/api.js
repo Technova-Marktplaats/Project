@@ -19,22 +19,6 @@ apiClient.interceptors.request.use(
     // Voor FormData requests, laat browser de Content-Type automatisch instellen
     if (config.data instanceof FormData) {
       delete config.headers['Content-Type']
-      
-      // Temporary debugging voor FormData
-      console.log('AXIOS: FormData request gedetecteerd')
-      console.log('AXIOS: URL:', config.url)
-      console.log('AXIOS: Method:', config.method)
-      console.log('AXIOS: Headers:', config.headers)
-      
-      // Log FormData contents
-      console.log('AXIOS: FormData entries:')
-      for (let pair of config.data.entries()) {
-        if (pair[1] instanceof File) {
-          console.log('AXIOS:', pair[0], 'File:', pair[1].name, pair[1].size, 'bytes', pair[1].type)
-        } else {
-          console.log('AXIOS:', pair[0], pair[1])
-        }
-      }
     }
     
     return config
@@ -83,6 +67,9 @@ export const apiService = {
     getById: (id) => 
       apiClient.get(`/items/${id}`),
     
+    getMyItems: () => 
+      apiClient.get('/items/my-items'),
+    
     create: (itemData) => 
       apiClient.post('/items', itemData),
     
@@ -100,23 +87,28 @@ export const apiService = {
   categories: {
     getAll: () => 
       apiClient.get('/categories')
+  },
+
+  // Reservations endpoints
+  reservations: {
+    getAll: () => apiClient.get('/reservations'),
+    getByItem: (itemId) => apiClient.get('/reservations', { params: { item_id: itemId } }),
+    getMyItemReservations: (params) => apiClient.get('/reservations/my-items', { params }),
+    create: (reservationData) => apiClient.post('/reservations', reservationData),
+    approve: (id) => apiClient.post(`/reservations/${id}/approve`),
+    reject: (id) => apiClient.post(`/reservations/${id}/reject`),
+    delete: (id) => apiClient.delete(`/reservations/${id}`)
+  },
+
+  // Utility functions
+  getCurrentApiUrl: () => API_CONFIG.BASE_URL,
+  updateApiBaseUrl: (newUrl) => {
+    API_CONFIG.BASE_URL = newUrl
+    apiClient.defaults.baseURL = newUrl
+    console.log(`API Base URL bijgewerkt naar: ${newUrl}`)
   }
 
-  // Toekomstige endpoints kunnen hier worden toegevoegd:
-  // users: {
-  //   getProfile: () => apiClient.get('/user'),
-  //   updateProfile: (data) => apiClient.put('/user', data)
-  // }
 }
-
-// Helper functies voor configuratie
-export const updateApiBaseUrl = (newUrl) => {
-  API_CONFIG.BASE_URL = newUrl
-  apiClient.defaults.baseURL = newUrl
-  console.log(`API Base URL bijgewerkt naar: ${newUrl}`)
-}
-
-export const getCurrentApiUrl = () => API_CONFIG.BASE_URL
 
 // Handige helper voor direct gebruik
 export default apiService 

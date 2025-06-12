@@ -5,6 +5,7 @@ import ItemDetail from '../components/ItemDetail.vue'
 import Login from '../components/Login.vue'
 import Register from '../components/Register.vue'
 import AddItem from '../components/AddItem.vue'
+import MyItems from '../components/MyItems.vue'
 
 const routes = [
   {
@@ -29,6 +30,12 @@ const routes = [
     path: '/add-item',
     name: 'AddItem',
     component: AddItem,
+    meta: { requiresAuth: true } // Vereist authenticatie
+  },
+  {
+    path: '/my-items',
+    name: 'MyItems',
+    component: MyItems,
     meta: { requiresAuth: true } // Vereist authenticatie
   },
   {
