@@ -6,6 +6,8 @@ import Login from '../components/Login.vue'
 import Register from '../components/Register.vue'
 import AddItem from '../components/AddItem.vue'
 import MyItems from '../components/MyItems.vue'
+import MyReservations from '../components/MyReservations.vue'
+import AuthCallback from '../components/AuthCallback.vue'
 
 const routes = [
   {
@@ -19,6 +21,12 @@ const routes = [
     name: 'Register',
     component: Register,
     meta: { requiresGuest: true } // Alleen toegankelijk voor niet-ingelogde gebruikers
+  },
+  {
+    path: '/auth/callback',
+    name: 'AuthCallback',
+    component: AuthCallback,
+    meta: { requiresGuest: true } // Google OAuth callback
   },
   {
     path: '/',
@@ -43,6 +51,12 @@ const routes = [
     name: 'ItemDetail',
     component: ItemDetail,
     props: true,
+    meta: { requiresAuth: true } // Vereist authenticatie
+  },
+  {
+    path: '/my-reservations',
+    name: 'MyReservations',
+    component: MyReservations,
     meta: { requiresAuth: true } // Vereist authenticatie
   },
   // Redirect route voor onbekende paden

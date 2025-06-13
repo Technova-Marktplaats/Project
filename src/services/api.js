@@ -96,8 +96,7 @@ export const apiService = {
     getMyItemReservations: (params) => apiClient.get('/reservations/my-items', { params }),
     create: (reservationData) => apiClient.post('/reservations', reservationData),
     approve: (id) => apiClient.post(`/reservations/${id}/approve`),
-    reject: (id) => apiClient.post(`/reservations/${id}/reject`),
-    delete: (id) => apiClient.delete(`/reservations/${id}`)
+    reject: (id) => apiClient.post(`/reservations/${id}/reject`)
   },
 
   // Utility functions

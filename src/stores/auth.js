@@ -162,6 +162,24 @@ export const useAuthStore = defineStore('auth', {
     // Error state opschonen
     clearError() {
       this.error = null
+    },
+
+    // Handmatig token instellen (voor Google OAuth)
+    setToken(token) {
+      this.token = token
+      this.isAuthenticated = true
+      localStorage.setItem('auth_token', token)
+    },
+
+    // Handmatig user data instellen (voor Google OAuth)
+    setUser(userData) {
+      this.user = userData
+      localStorage.setItem('user_data', JSON.stringify(userData))
+    },
+
+    // Handmatig error instellen
+    setError(errorMessage) {
+      this.error = errorMessage
     }
   }
 }) 
