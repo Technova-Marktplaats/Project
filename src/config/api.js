@@ -3,10 +3,10 @@
 
 export const API_CONFIG = {
   // Hoofdinstellingen - verander dit om naar een andere server te wijzen
-  BASE_URL: 'http://localhost/LaravelBackend/public/api',
+  BASE_URL: 'http://laravelbackend.test/api/',
   
   // Algemene instellingen
-  TIMEOUT: 10000, // 10 seconden
+  TIMEOUT: 3000000, // 10 seconden
   
   // Standaard headers
   HEADERS: {
@@ -16,7 +16,7 @@ export const API_CONFIG = {
 
   // Environment specifieke configuraties
   ENVIRONMENTS: {
-    development: 'http://localhost/LaravelBackend/public/api',
+    development: 'http://laravelbackend/LaravelBackend/public/api',
     staging: 'http://staging.marktplaats.com/api', 
     production: 'http://srv856957.hstgr.cloud/mp/api'
   }
