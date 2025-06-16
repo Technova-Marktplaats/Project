@@ -2,6 +2,7 @@
 import { useAuthStore } from './stores/auth'
 import { useRouter } from 'vue-router'
 import { ref } from 'vue'
+import NavigationMenu from './components/NavigationMenu.vue'
 
 const authStore = useAuthStore()
 const router = useRouter()
@@ -59,6 +60,9 @@ const closeDropdown = () => {
       </div>
     </header>
     
+    <!-- Navigation Menu -->
+    <NavigationMenu v-if="authStore.isLoggedIn" />
+    
     <main>
       <router-view />
     </main>
@@ -75,7 +79,6 @@ const closeDropdown = () => {
   background: white;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   padding: 20px 0;
-  margin-bottom: 20px;
   position: sticky;
   top: 0;
   z-index: 100;
@@ -198,6 +201,7 @@ const closeDropdown = () => {
 }
 
 main {
+  padding-top: 20px;
   max-width: 100%;
   margin: 0 auto;
 }

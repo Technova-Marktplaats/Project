@@ -8,6 +8,7 @@ import AddItem from '../components/AddItem.vue'
 import MyItems from '../components/MyItems.vue'
 import MyReservations from '../components/MyReservations.vue'
 import AuthCallback from '../components/AuthCallback.vue'
+import Profile from '../components/Profile.vue'
 
 const routes = [
   {
@@ -15,6 +16,12 @@ const routes = [
     name: 'Login',
     component: Login,
     meta: { requiresGuest: true } // Alleen toegankelijk voor niet-ingelogde gebruikers
+  },
+  {
+    path: '/profile',
+    name: 'Profile',
+    component: Profile,
+    meta: { requiresAuth: true } // Vereist authenticatie
   },
   {
     path: '/register',
@@ -44,6 +51,12 @@ const routes = [
     path: '/my-items',
     name: 'MyItems',
     component: MyItems,
+    meta: { requiresAuth: true } // Vereist authenticatie
+  },
+  {
+    path: '/profile',
+    name: 'Profile',
+    component: Profile,
     meta: { requiresAuth: true } // Vereist authenticatie
   },
   {

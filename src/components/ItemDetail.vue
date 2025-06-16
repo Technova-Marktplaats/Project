@@ -1,8 +1,18 @@
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, computed, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import apiService from '../services/api'
 import { useAuthStore } from '../stores/auth'
+import L from 'leaflet'
+import 'leaflet/dist/leaflet.css'
+
+// Fix for default markers in Leaflet with Vite
+delete L.Icon.Default.prototype._getIconUrl
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+})
 
 const route = useRoute()
 const router = useRouter()
@@ -26,10 +36,25 @@ const reservationForm = ref({
 })
 const reservationFormVisible = ref(false)
 
+// Map state
+const mapContainer = ref(null)
+const map = ref(null)
+const userMarker = ref(null)
+const ownerMarker = ref(null)
+const distanceLine = ref(null)
+const distance = ref(null)
+
 const isOwner = computed(() => item.value && authStore.user && item.value.user_id === authStore.user.id)
 const hasReserved = computed(() => {
   if (!authStore.user) return false
   return reservations.value.some(r => r.user_id === authStore.user.id)
+})
+
+// Check if both locations are available for map display
+const canShowMap = computed(() => {
+  const userHasLocation = authStore.user?.location_lat && authStore.user?.location_lon
+  const ownerHasLocation = item.value?.user?.location_lat && item.value?.user?.location_lon
+  return userHasLocation && ownerHasLocation && !isOwner.value
 })
 
 const fetchItem = async () => {
@@ -164,9 +189,102 @@ const rejectReservation = async (id) => {
   }
 }
 
+// Calculate distance between two coordinates using Haversine formula
+const calculateDistance = (lat1, lon1, lat2, lon2) => {
+  const R = 6371 // Earth's radius in kilometers
+  const dLat = (lat2 - lat1) * Math.PI / 180
+  const dLon = (lon2 - lon1) * Math.PI / 180
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2)
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
+  return R * c // Distance in kilometers
+}
+
+const initializeMap = async () => {
+  if (!canShowMap.value) return
+  
+  await nextTick()
+  
+  if (!mapContainer.value) return
+
+  // Initialize map
+  map.value = L.map(mapContainer.value).setView([52.3676, 4.9041], 7) // Default to Netherlands
+
+  // Add tile layer
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  }).addTo(map.value)
+
+  updateMapMarkers()
+}
+
+const updateMapMarkers = () => {
+  if (!map.value || !canShowMap.value) return
+
+  const userLat = authStore.user.location_lat
+  const userLon = authStore.user.location_lon
+  const ownerLat = item.value.user.location_lat
+  const ownerLon = item.value.user.location_lon
+
+  // Remove existing markers and line
+  if (userMarker.value) map.value.removeLayer(userMarker.value)
+  if (ownerMarker.value) map.value.removeLayer(ownerMarker.value)
+  if (distanceLine.value) map.value.removeLayer(distanceLine.value)
+
+  // Create custom icons
+  const userIcon = L.divIcon({
+    html: '<div style="background-color: #4f46e5; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>',
+    className: 'custom-marker',
+    iconSize: [20, 20],
+    iconAnchor: [10, 10]
+  })
+
+  const ownerIcon = L.divIcon({
+    html: '<div style="background-color: #ef4444; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>',
+    className: 'custom-marker',
+    iconSize: [20, 20],
+    iconAnchor: [10, 10]
+  })
+
+  // Add user marker (blue)
+  userMarker.value = L.marker([userLat, userLon], { icon: userIcon }).addTo(map.value)
+  userMarker.value.bindPopup('Jouw locatie')
+
+  // Add owner marker (red)
+  ownerMarker.value = L.marker([ownerLat, ownerLon], { icon: ownerIcon }).addTo(map.value)
+  ownerMarker.value.bindPopup(`Locatie van ${item.value.user.name || 'eigenaar'}`)
+
+  // Add line between markers
+  distanceLine.value = L.polyline([
+    [userLat, userLon],
+    [ownerLat, ownerLon]
+  ], {
+    color: '#6b7280',
+    weight: 3,
+    opacity: 0.7,
+    dashArray: '5, 10'
+  }).addTo(map.value)
+
+  // Calculate and store distance
+  distance.value = calculateDistance(userLat, userLon, ownerLat, ownerLon)
+
+  // Fit map to show both markers
+  const group = new L.featureGroup([userMarker.value, ownerMarker.value])
+  map.value.fitBounds(group.getBounds().pad(0.1))
+}
+
 const formatDate = (dateString) => {
   if (!dateString) return 'Niet opgegeven'
   return new Date(dateString).toLocaleDateString('nl-NL')
+}
+
+const formatDistance = (dist) => {
+  if (dist < 1) {
+    return `${Math.round(dist * 1000)} meter`
+  }
+  return `${dist.toFixed(1)} km`
 }
 
 const goBack = () => {
@@ -185,12 +303,23 @@ onMounted(async () => {
   await fetchItem()
   // Reserveringen ophalen nadat item is geladen
   await fetchReservations()
+  // Kaart initialiseren als beide locaties beschikbaar zijn
+  await initializeMap()
 })
 
 // Watch voor als item verandert
-watch(item, (newItem) => {
+watch(item, async (newItem) => {
   if (newItem) {
-    fetchReservations()
+    await fetchReservations()
+    // Update kaart als item verandert
+    await initializeMap()
+  }
+})
+
+// Watch voor kaart updates
+watch(canShowMap, async (canShow) => {
+  if (canShow) {
+    await initializeMap()
   }
 })
 </script>
@@ -338,6 +467,45 @@ watch(item, (newItem) => {
               </div>
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- Locatie kaart sectie -->
+      <div v-if="canShowMap" class="location-section">
+        <div class="location-header">
+          <h2>Locatie en afstand</h2>
+          <div v-if="distance" class="distance-info">
+            <span class="distance-icon">📍</span>
+            <span class="distance-text">Afstand: {{ formatDistance(distance) }}</span>
+          </div>
+        </div>
+        
+        <div class="location-legend">
+          <div class="legend-item">
+            <div class="legend-marker user-marker"></div>
+            <span>Jouw locatie</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-marker owner-marker"></div>
+            <span>Locatie eigenaar</span>
+          </div>
+        </div>
+
+        <div class="map-container">
+          <div ref="mapContainer" class="location-map"></div>
+        </div>
+      </div>
+
+      <div v-else-if="!isOwner" class="no-location-info">
+        <div class="no-location-content">
+          <span class="no-location-icon">📍</span>
+          <h3>Locatie niet beschikbaar</h3>
+          <p v-if="!authStore.user?.location_lat || !authStore.user?.location_lon">
+            Deel je locatie in je profiel om de afstand tot items te zien.
+          </p>
+          <p v-else-if="!item?.user?.location_lat || !item?.user?.location_lon">
+            De eigenaar van dit item heeft geen locatie gedeeld.
+          </p>
         </div>
       </div>
     </div>
@@ -697,5 +865,144 @@ watch(item, (newItem) => {
   background: #edf2f7;
   padding: 2px 8px;
   border-radius: 4px;
+}
+
+/* Location section styles */
+.location-section {
+  margin-top: 40px;
+  background: white;
+  border-radius: 12px;
+  padding: 30px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.location-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.location-header h2 {
+  margin: 0;
+  color: #2d3748;
+  font-size: 1.5em;
+}
+
+.distance-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f0f9ff;
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: 1px solid #bae6fd;
+}
+
+.distance-icon {
+  font-size: 1.2em;
+}
+
+.distance-text {
+  font-weight: 600;
+  color: #0369a1;
+}
+
+.location-legend {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 20px;
+  padding: 15px;
+  background: #f8fafc;
+  border-radius: 8px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9em;
+  color: #4a5568;
+}
+
+.legend-marker {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.user-marker {
+  background-color: #4f46e5;
+}
+
+.owner-marker {
+  background-color: #ef4444;
+}
+
+.map-container {
+  border-radius: 12px;
+  overflow: hidden;
+  border: 2px solid #e2e8f0;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.location-map {
+  height: 400px;
+  width: 100%;
+}
+
+.no-location-info {
+  margin-top: 40px;
+  background: #f8fafc;
+  border: 2px dashed #cbd5e0;
+  border-radius: 12px;
+  padding: 40px;
+}
+
+.no-location-content {
+  text-align: center;
+  color: #6b7280;
+}
+
+.no-location-icon {
+  font-size: 3em;
+  display: block;
+  margin-bottom: 15px;
+  opacity: 0.5;
+}
+
+.no-location-content h3 {
+  margin: 0 0 10px 0;
+  color: #4a5568;
+}
+
+.no-location-content p {
+  margin: 5px 0;
+  line-height: 1.5;
+}
+
+@media (max-width: 768px) {
+  .location-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+  }
+  
+  .location-legend {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .location-map {
+    height: 300px;
+  }
+  
+  .location-section {
+    padding: 20px;
+  }
 }
 </style> 
