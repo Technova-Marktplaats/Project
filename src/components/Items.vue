@@ -1,7 +1,9 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import apiService from '../services/api.js'
+import apiService from '../services/api'
+import cacheService from '../services/cache'
+import PWAInstallButton from './PWAInstallButton.vue'
 
 const router = useRouter()
 
@@ -9,14 +11,19 @@ const items = ref([])
 const loading = ref(false)
 const error = ref(null)
 
+// Cache en offline status
+const isOffline = ref(!navigator.onLine)
+const cacheStatus = ref(null)
+let networkCleanup = null
+
 const fetchItems = async () => {
   loading.value = true
   error.value = null
-  
+
   try {
     const response = await apiService.items.getAll()
     console.log('API Response:', response.data)
-    
+
     // Check if response has wrapper structure (success, data, message)
     if (response.data.data && Array.isArray(response.data.data)) {
       items.value = response.data.data
@@ -26,12 +33,17 @@ const fetchItems = async () => {
       console.error('Unexpected response structure:', response.data)
       items.value = []
     }
+
+    // Cache items als ze succesvol zijn opgehaald
+    if (items.value.length > 0) {
+      await cacheService.cacheItems(items.value)
+    }
   } catch (err) {
     console.error('Volledige fout:', err)
     console.error('Response data:', err.response?.data)
     console.error('Response status:', err.response?.status)
     console.error('Response headers:', err.response?.headers)
-    
+
     if (err.response?.status === 500) {
       error.value = 'Server fout (500): Controleer je Laravel logs. Mogelijk database of API endpoint probleem.'
     } else if (err.code === 'ECONNABORTED') {
@@ -46,8 +58,29 @@ const fetchItems = async () => {
   }
 }
 
-onMounted(() => {
-  fetchItems()
+// Initialize cache status en network monitoring
+const initializeCacheStatus = async () => {
+  cacheStatus.value = await cacheService.getCacheStatus()
+}
+
+onMounted(async () => {
+  await fetchItems()
+  await initializeCacheStatus()
+
+  // Monitor network changes
+  networkCleanup = cacheService.onNetworkChange((status) => {
+    isOffline.value = !status.online
+    if (status.online && items.value.length === 0) {
+      // Als we weer online komen en geen items hebben, probeer opnieuw
+      fetchItems()
+    }
+  })
+})
+
+onUnmounted(() => {
+  if (networkCleanup) {
+    networkCleanup()
+  }
 })
 
 const onImageError = (event) => {
@@ -63,23 +96,27 @@ const onImageError = (event) => {
 const navigateToItem = (itemId) => {
   router.push(`/item/${itemId}`)
 }
+
+
 </script>
 
 <template>
   <div class="items-container">
     <div class="header">
       <h2>Items Overzicht</h2>
-      <div class="header-actions">
-        <button @click="$router.push('/my-items')" class="my-items-btn">
-          <i class="fas fa-user"></i>
-          Mijn Items
-        </button>
-        <button @click="$router.push('/add-item')" class="add-item-btn">
-          + Nieuw Item
-        </button>
-        <button @click="fetchItems" :disabled="loading" class="refresh-btn">
-          {{ loading ? 'Laden...' : 'Vernieuwen' }}
-        </button>
+
+      <div class="header-controls">
+        <div class="status-indicators">
+          <span v-if="isOffline" class="offline-indicator" title="Offline - cache wordt gebruikt">
+            📡 Offline
+          </span>
+        </div>
+
+        <div class="header-actions">
+          <button @click="fetchItems" :disabled="loading" class="refresh-btn">
+            {{ loading ? 'Laden...' : 'Vernieuwen' }}
+          </button>
+        </div>
       </div>
     </div>
 
@@ -97,25 +134,25 @@ const navigateToItem = (itemId) => {
     </div>
 
     <div v-else class="items-grid">
-      <div 
-        v-for="item in items" 
-        :key="item.id" 
-        class="item-card"
-        @click="navigateToItem(item.id)"
+      <div
+          v-for="item in items"
+          :key="item.id"
+          class="item-card"
+          @click="navigateToItem(item.id)"
       >
         <div class="item-image">
-          <img 
-            v-if="item.images && item.images.length > 0" 
-            :src="item.images[0].url" 
-            :alt="item.title"
-            class="item-img"
-            @error="onImageError"
+          <img
+              v-if="item.images && item.images.length > 0"
+              :src="item.images[0].url"
+              :alt="item.title"
+              class="item-img"
+              @error="onImageError"
           />
           <div v-else class="no-image">
             <span>Geen afbeelding</span>
           </div>
         </div>
-        
+
         <div class="item-content">
           <h3>{{ item.title || 'Onbekend Item' }}</h3>
           <p v-if="item.description" class="description">{{ item.description }}</p>
@@ -146,74 +183,80 @@ const navigateToItem = (itemId) => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 30px;
-  padding-bottom: 15px;
-  border-bottom: 2px solid #e2e8f0;
-  flex-wrap: wrap;
-  gap: 15px;
+  padding: 15px 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .header h2 {
-  color: #2d3748;
+  color: white;
   margin: 0;
+  font-weight: 600;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.header-actions {
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.status-indicators {
   display: flex;
   gap: 10px;
   align-items: center;
 }
 
-.my-items-btn {
-  background: #38a169;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 6px;
-  cursor: pointer;
+.offline-indicator {
+  background: rgba(254, 215, 215, 0.9);
+  color: #e53e3e;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.85em;
   font-weight: 500;
-  transition: background-color 0.2s;
+  border: 1px solid rgba(254, 178, 178, 0.8);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+
+
+.header-actions {
   display: flex;
+  gap: 12px;
   align-items: center;
-  gap: 8px;
-}
-
-.my-items-btn:hover {
-  background: #2f855a;
-}
-
-.add-item-btn {
-  background: #4299e1;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 500;
-  transition: background-color 0.2s;
-}
-
-.add-item-btn:hover {
-  background: #3182ce;
 }
 
 .refresh-btn {
-  background: #4299e1;
+  background: rgba(255, 255, 255, 0.2);
   color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 8px 16px;
+  border-radius: 20px;
   cursor: pointer;
   font-weight: 500;
-  transition: background-color 0.2s;
+  font-size: 0.9em;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .refresh-btn:hover:not(:disabled) {
-  background: #3182ce;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .refresh-btn:disabled {
-  background: #a0aec0;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.6);
   cursor: not-allowed;
+  transform: none;
 }
 
 .loading, .error, .no-items {
@@ -367,19 +410,39 @@ const navigateToItem = (itemId) => {
 @media (max-width: 768px) {
   .header {
     flex-direction: column;
-    align-items: stretch;
-    text-align: center;
+    gap: 15px;
+    padding: 15px;
   }
-  
-  .header-actions {
+
+  .header h2 {
+    text-align: center;
+    margin-bottom: 10px;
+  }
+
+  .header-controls {
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .status-indicators {
     justify-content: center;
     flex-wrap: wrap;
   }
-  
-  .add-item-btn,
+
+  .header-actions {
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
   .refresh-btn {
-    flex: 1;
     min-width: 120px;
+    padding: 10px 16px;
+  }
+
+  .items-grid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 15px;
   }
 }
 </style>

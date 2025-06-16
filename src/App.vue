@@ -1,7 +1,8 @@
 <script setup>
-import { useAuthStore } from './stores/auth.js'
+import { useAuthStore } from './stores/auth'
 import { useRouter } from 'vue-router'
 import { ref } from 'vue'
+import NavigationMenu from './components/NavigationMenu.vue'
 
 const authStore = useAuthStore()
 const router = useRouter()
@@ -28,22 +29,22 @@ const closeDropdown = () => {
     <header class="app-header" v-if="authStore.isLoggedIn">
       <div class="header-content">
         <h1 @click="$router.push('/')">Marktplaats</h1>
-        
+
         <div class="user-section">
           <div class="user-dropdown" @click.stop>
             <button @click="toggleDropdown" class="user-btn">
               <span>{{ authStore.userName || authStore.userEmail }}</span>
-              <svg 
-                :class="{ 'rotate': showUserDropdown }" 
-                width="16" 
-                height="16" 
-                fill="currentColor" 
-                viewBox="0 0 16 16"
+              <svg
+                  :class="{ 'rotate': showUserDropdown }"
+                  width="16"
+                  height="16"
+                  fill="currentColor"
+                  viewBox="0 0 16 16"
               >
                 <path d="M8 11.5L3.5 7h9L8 11.5z"/>
               </svg>
             </button>
-            
+
             <div v-if="showUserDropdown" class="dropdown-menu">
               <div class="dropdown-header">
                 <p class="user-name">{{ authStore.userName }}</p>
@@ -58,11 +59,18 @@ const closeDropdown = () => {
         </div>
       </div>
     </header>
-    
+
+    <!-- Navigation Menu -->
+    <NavigationMenu v-if="authStore.isLoggedIn" />
+
     <main>
+      <!-- From Uiverse.io by alexruix -->
+      <input class="input" name="text" placeholder="Search..." type="search">
       <router-view />
+
     </main>
-  </div>
+
+ </div>
 </template>
 
 <style scoped>
@@ -75,7 +83,6 @@ const closeDropdown = () => {
   background: white;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   padding: 20px 0;
-  margin-bottom: 20px;
   position: sticky;
   top: 0;
   z-index: 100;
@@ -198,6 +205,7 @@ const closeDropdown = () => {
 }
 
 main {
+  padding-top: 20px;
   max-width: 100%;
   margin: 0 auto;
 }
@@ -207,15 +215,15 @@ main {
   .header-content {
     padding: 0 15px;
   }
-  
+
   .app-header h1 {
     font-size: 1.5em;
   }
-  
+
   .user-btn span {
     display: none;
   }
-  
+
   .dropdown-menu {
     right: -10px;
   }
@@ -234,5 +242,28 @@ main {
 
 .logo.vue:hover {
   filter: drop-shadow(0 0 2em #42b883aa);
+}
+
+/* From Uiverse.io by alexruix */
+.input {
+  max-width: 190px;
+  background-color: #f5f5f5;
+  color: #242424;
+  padding: .15rem .5rem;
+  min-height: 40px;
+  border-radius: 4px;
+  outline: none;
+  border: none;
+  line-height: 1.15;
+  box-shadow: 0px 10px 20px -18px;
+}
+
+input:focus {
+  border-bottom: 2px solid #5b5fc7;
+  border-radius: 4px 4px 2px 2px;
+}
+
+input:hover {
+  outline: 1px solid lightgrey;
 }
 </style>
