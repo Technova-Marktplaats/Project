@@ -1,10 +1,13 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useAuthStore } from '../stores/auth'
 import PWAInstallButton from './PWAInstallButton.vue'
+import apiService from '../services/api'
 
 const route = useRoute()
 const router = useRouter()
+const authStore = useAuthStore()
 
 // Mobile menu toggle
 const isMobileMenuOpen = ref(false)
@@ -15,6 +18,46 @@ const toggleMobileMenu = () => {
 
 const closeMobileMenu = () => {
   isMobileMenuOpen.value = false
+}
+
+// User dropdown toggle
+const showUserDropdown = ref(false)
+
+const toggleUserDropdown = () => {
+  showUserDropdown.value = !showUserDropdown.value
+}
+
+const closeUserDropdown = () => {
+  showUserDropdown.value = false
+}
+
+const handleLogout = async () => {
+  await authStore.logout()
+  showUserDropdown.value = false
+  router.push('/login')
+}
+
+// Inbox/Notifications state
+const unreadCount = ref(0)
+let notificationInterval = null
+
+// Fetch unread notifications count
+const fetchUnreadCount = async () => {
+  if (!authStore.isLoggedIn) return
+  
+  try {
+    const response = await apiService.notifications.getUnreadCount()
+    unreadCount.value = response.data.count || response.data.data?.count || 0
+  } catch (error) {
+    console.error('Fout bij ophalen ongelezen berichten:', error)
+    // Fail silently - don't show errors for background requests
+  }
+}
+
+// Navigate to inbox/notifications
+const goToInbox = () => {
+  router.push('/notifications')
+  closeMobileMenu()
 }
 
 // Navigation items
@@ -51,6 +94,11 @@ const navigationItems = [
   }
 ]
 
+// Computed property for inbox display
+const inboxDisplay = computed(() => {
+  return unreadCount.value > 0 ? `Inbox (${unreadCount.value})` : 'Inbox'
+})
+
 // Check if route is active
 const isActiveRoute = (path) => {
   if (path === '/') {
@@ -64,10 +112,25 @@ const navigateTo = (path) => {
   router.push(path)
   closeMobileMenu()
 }
+
+// Setup and cleanup
+onMounted(() => {
+  if (authStore.isLoggedIn) {
+    fetchUnreadCount()
+    // Refresh every 30 seconds
+    notificationInterval = setInterval(fetchUnreadCount, 30000)
+  }
+})
+
+onUnmounted(() => {
+  if (notificationInterval) {
+    clearInterval(notificationInterval)
+  }
+})
 </script>
 
 <template>
-  <nav class="navigation-menu">
+  <nav class="navigation-menu" @click="closeUserDropdown">
     <!-- Desktop Navigation -->
     <div class="desktop-nav">
       <div class="nav-container">
@@ -83,11 +146,54 @@ const navigateTo = (path) => {
               <span class="nav-icon">{{ item.icon }}</span>
               <span class="nav-text">{{ item.name }}</span>
             </button>
+            
+            <!-- Inbox Button -->
+            <button
+              @click="goToInbox"
+              :class="['nav-item', 'inbox-item', { 'active': isActiveRoute('/notifications') }]"
+              title="Berichten en notificaties"
+            >
+              <span class="nav-icon">📧</span>
+              <span class="nav-text">{{ inboxDisplay }}</span>
+              <span v-if="unreadCount > 0" class="unread-badge">{{ unreadCount }}</span>
+            </button>
           </div>
           
-          <!-- PWA Install Button -->
-          <div class="nav-pwa-container">
-            <PWAInstallButton />
+          <!-- User Section & PWA Install Button -->
+          <div class="nav-right-section">
+            <!-- User Dropdown -->
+            <div class="nav-user-section">
+              <div class="nav-user-dropdown" @click.stop>
+                <button @click="toggleUserDropdown" class="nav-user-btn">
+                  <span>{{ authStore.userName || authStore.userEmail }}</span>
+                  <svg 
+                    :class="{ 'rotate': showUserDropdown }" 
+                    width="16" 
+                    height="16" 
+                    fill="currentColor" 
+                    viewBox="0 0 16 16"
+                  >
+                    <path d="M8 11.5L3.5 7h9L8 11.5z"/>
+                  </svg>
+                </button>
+                
+                <div v-if="showUserDropdown" class="nav-dropdown-menu">
+                  <div class="nav-dropdown-header">
+                    <p class="nav-user-name">{{ authStore.userName }}</p>
+                    <p class="nav-user-email">{{ authStore.userEmail }}</p>
+                  </div>
+                  <div class="nav-dropdown-divider"></div>
+                  <button @click="handleLogout" class="nav-dropdown-item logout">
+                    Uitloggen
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            <!-- PWA Install Button -->
+            <div class="nav-pwa-container">
+              <PWAInstallButton />
+            </div>
           </div>
         </div>
       </div>
@@ -125,6 +231,19 @@ const navigateTo = (path) => {
                 <span class="mobile-nav-text">{{ item.name }}</span>
                 <span class="mobile-nav-description">{{ item.description }}</span>
               </div>
+            </button>
+            
+            <!-- Mobile Inbox Item -->
+            <button
+              @click="goToInbox"
+              :class="['mobile-nav-item', 'mobile-inbox-item', { 'active': isActiveRoute('/notifications') }]"
+            >
+              <span class="mobile-nav-icon">📧</span>
+              <div class="mobile-nav-content">
+                <span class="mobile-nav-text">{{ inboxDisplay }}</span>
+                <span class="mobile-nav-description">Berichten en notificaties</span>
+              </div>
+              <span v-if="unreadCount > 0" class="mobile-unread-badge">{{ unreadCount }}</span>
             </button>
             
             <!-- PWA Install Button for Mobile -->
@@ -222,6 +341,128 @@ const navigateTo = (path) => {
   font-size: 0.9em;
 }
 
+.inbox-item {
+  position: relative;
+}
+
+.unread-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: #dc2626;
+  color: white;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  font-size: 0.7em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.nav-right-section {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.nav-user-section {
+  position: relative;
+}
+
+.nav-user-dropdown {
+  position: relative;
+}
+
+.nav-user-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.nav-user-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.nav-user-btn svg {
+  transition: transform 0.2s;
+}
+
+.nav-user-btn svg.rotate {
+  transform: rotate(180deg);
+}
+
+.nav-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  min-width: 200px;
+  z-index: 1000;
+}
+
+.nav-dropdown-header {
+  padding: 12px 16px;
+}
+
+.nav-user-name {
+  font-weight: 500;
+  color: #1f2937;
+  margin: 0 0 4px 0;
+  font-size: 0.9em;
+}
+
+.nav-user-email {
+  color: #6b7280;
+  margin: 0;
+  font-size: 0.8em;
+}
+
+.nav-dropdown-divider {
+  height: 1px;
+  background: #e5e7eb;
+  margin: 0;
+}
+
+.nav-dropdown-item {
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 12px 16px;
+  color: #374151;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  font-size: 0.9em;
+}
+
+.nav-dropdown-item:hover {
+  background: #f9fafb;
+}
+
+.nav-dropdown-item.logout {
+  color: #dc2626;
+}
+
+.nav-dropdown-item.logout:hover {
+  background: #fef2f2;
+}
+
 .nav-pwa-container {
   display: flex;
   align-items: center;
@@ -246,6 +487,7 @@ const navigateTo = (path) => {
   flex-direction: column;
   align-items: center;
   gap: 4px;
+  color:#3b82f6;
   background: white;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
@@ -405,6 +647,28 @@ const navigateTo = (path) => {
   color: #1d4ed8;
 }
 
+.mobile-inbox-item {
+  position: relative;
+}
+
+.mobile-inbox-item .mobile-unread-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: #dc2626;
+  color: white;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  font-size: 0.75em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  border: 2px solid white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
 .mobile-pwa-container {
   padding: 16px;
   border-top: 1px solid #e2e8f0;
@@ -487,6 +751,20 @@ const navigateTo = (path) => {
     width: 100%;
     justify-content: flex-start;
     padding: 12px 16px;
+  }
+  
+  .nav-right-section {
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+  }
+  
+  .nav-user-btn span {
+    display: none;
+  }
+  
+  .nav-dropdown-menu {
+    right: -10px;
   }
   
   .nav-pwa-container {

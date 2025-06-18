@@ -9,6 +9,7 @@ import MyItems from '../components/MyItems.vue'
 import MyReservations from '../components/MyReservations.vue'
 import AuthCallback from '../components/AuthCallback.vue'
 import Profile from '../components/Profile.vue'
+import Notifications from '../components/Notifications.vue'
 
 const routes = [
   {
@@ -70,6 +71,12 @@ const routes = [
     path: '/my-reservations',
     name: 'MyReservations',
     component: MyReservations,
+    meta: { requiresAuth: true } // Vereist authenticatie
+  },
+  {
+    path: '/notifications',
+    name: 'Notifications',
+    component: Notifications,
     meta: { requiresAuth: true } // Vereist authenticatie
   },
   // Redirect route voor onbekende paden

@@ -36,6 +36,10 @@ const reservationForm = ref({
 })
 const reservationFormVisible = ref(false)
 
+// Watchlist state
+const isOnWatchlist = ref(false)
+const watchlistLoading = ref(false)
+
 // Map state
 const mapContainer = ref(null)
 const map = ref(null)
@@ -75,6 +79,11 @@ const fetchItem = async () => {
       console.error('Unexpected response structure:', response.data)
       error.value = 'Onverwachte response structuur'
       return
+    }
+
+    // Stel watchlist status in op basis van backend response
+    if (authStore.user && item.value.op_watchlist !== undefined) {
+      isOnWatchlist.value = item.value.op_watchlist
     }
   } catch (err) {
     console.error('Fout bij ophalen item:', err)
@@ -153,6 +162,34 @@ const showReservationForm = () => {
 const cancelReservation = () => {
   reservationFormVisible.value = false
   reservationForm.value = { startDate: '', endDate: '' }
+}
+
+const toggleWatchlist = async () => {
+  if (watchlistLoading.value) return
+  
+  watchlistLoading.value = true
+  try {
+    if (isOnWatchlist.value) {
+      await apiService.watchlist.remove(props.id)
+      isOnWatchlist.value = false
+      alert('Item verwijderd van watchlist!')
+    } else {
+      await apiService.watchlist.add(props.id)
+      isOnWatchlist.value = true
+      alert('Item toegevoegd aan watchlist!')
+    }
+  } catch (e) {
+    console.error('Watchlist error:', e)
+    if (e.response?.status === 404) {
+      alert('Item niet gevonden.')
+    } else if (e.response?.status === 403) {
+      alert('Geen toestemming voor deze actie.')
+    } else {
+      alert('Fout bij wijzigen watchlist: ' + (e.response?.data?.message || e.message))
+    }
+  } finally {
+    watchlistLoading.value = false
+  }
 }
 
 const approveReservation = async (id) => {
@@ -400,9 +437,18 @@ watch(canShowMap, async (canShow) => {
           </div>
 
           <div v-if="!isOwner && !hasReserved" class="info-section reserve-section">
-            <button v-if="!reservationFormVisible" @click="showReservationForm" class="reserve-btn">
-              Reserveer dit item
-            </button>
+            <div class="action-buttons">
+              <button v-if="!reservationFormVisible" @click="showReservationForm" class="reserve-btn">
+                Reserveer dit item
+              </button>
+              <button 
+                @click="toggleWatchlist" 
+                :disabled="watchlistLoading"
+                class="watchlist-btn"
+              >
+                {{ watchlistLoading ? 'Laden...' : (isOnWatchlist ? '★ Op watchlist' : '☆ Toevoegen aan watchlist') }}
+              </button>
+            </div>
             
             <div v-if="reservationFormVisible" class="reservation-form">
               <h4>Reservering maken</h4>
@@ -700,6 +746,20 @@ watch(canShowMap, async (canShow) => {
   text-align: center;
 }
 
+.action-buttons {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 480px) {
+  .action-buttons {
+    flex-direction: column;
+    align-items: center;
+  }
+}
+
 .reserve-btn {
   background: #6b7280;
   color: white;
@@ -713,6 +773,26 @@ watch(canShowMap, async (canShow) => {
 
 .reserve-btn:hover {
   background: #4b5563;
+}
+
+.watchlist-btn {
+  background: #9ca3af;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.watchlist-btn:hover:not(:disabled) {
+  background: #6b7280;
+}
+
+.watchlist-btn:disabled {
+  background: #d1d5db;
+  cursor: not-allowed;
 }
 
 .owner-reservations {

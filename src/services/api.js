@@ -99,6 +99,19 @@ export const apiService = {
     reject: (id) => apiClient.post(`/reservations/${id}/reject`)
   },
 
+  // Watchlist endpoints
+  watchlist: {
+    add: (id) => apiClient.post(`/watchlist/${id}/add`),
+    remove: (id) => apiClient.post(`/watchlist/${id}/remove`)
+  },
+
+  // Notifications endpoints
+  notifications: {
+    getUnreadCount: () => apiClient.get('/notifications/unread-count'),
+    getAll: () => apiClient.get('/notifications'),
+    markAsRead: (id) => apiClient.put(`/notifications/${id}/read`)
+  },
+
   // Utility functions
   getCurrentApiUrl: () => API_CONFIG.BASE_URL,
   updateApiBaseUrl: (newUrl) => {
