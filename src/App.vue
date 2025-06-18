@@ -3,6 +3,7 @@ import { useAuthStore } from './stores/auth'
 import { useRouter } from 'vue-router'
 import { ref } from 'vue'
 import NavigationMenu from './components/NavigationMenu.vue'
+import Items from "./components/Items.vue";
 
 const authStore = useAuthStore()
 const router = useRouter()
@@ -22,6 +23,8 @@ const toggleDropdown = () => {
 const closeDropdown = () => {
   showUserDropdown.value = false
 }
+
+const searchQuery = ref('');
 </script>
 
 <template>
@@ -64,9 +67,15 @@ const closeDropdown = () => {
     <NavigationMenu v-if="authStore.isLoggedIn" />
 
     <main>
-      <!-- From Uiverse.io by alexruix -->
-      <input class="input" name="text" placeholder="Search..." type="search">
-      <router-view />
+      <input
+          class="input"
+          name="text"
+          placeholder="Search..."
+          type="search"
+          v-model="searchQuery"
+      />
+      <router-view :search="searchQuery" />
+
 
     </main>
 
@@ -243,7 +252,6 @@ main {
 .logo.vue:hover {
   filter: drop-shadow(0 0 2em #42b883aa);
 }
-
 /* From Uiverse.io by alexruix */
 .input {
   max-width: 190px;
@@ -266,4 +274,5 @@ input:focus {
 input:hover {
   outline: 1px solid lightgrey;
 }
+
 </style>

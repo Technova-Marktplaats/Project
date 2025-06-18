@@ -84,9 +84,6 @@ const navigateTo = (path) => {
               <span class="nav-text">{{ item.name }}</span>
             </button>
           </div>
-
-
-
           <!-- PWA Install Button -->
           <div class="nav-pwa-container">
             <PWAInstallButton />

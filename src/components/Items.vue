@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { computed } from 'vue'
 import apiService from '../services/api'
 import cacheService from '../services/cache'
 import PWAInstallButton from './PWAInstallButton.vue'
@@ -63,6 +64,14 @@ const initializeCacheStatus = async () => {
   cacheStatus.value = await cacheService.getCacheStatus()
 }
 
+// Const props voor search query van app.vue
+const props = defineProps({
+  search:{
+    type: String,
+    default: ''
+  }
+})
+
 onMounted(async () => {
   await fetchItems()
   await initializeCacheStatus()
@@ -97,6 +106,16 @@ const navigateToItem = (itemId) => {
   router.push(`/item/${itemId}`)
 }
 
+
+// Functie voor zoeken
+const filteredItems = computed(() => {
+  const query = props.search.toLowerCase()
+  return items.value.filter(item =>
+      item.title?.toLowerCase().includes(query) ||
+      item.description?.toLowerCase().includes(query) ||
+      item.category?.name?.toLowerCase().includes(query)
+  )
+})
 
 </script>
 
@@ -135,7 +154,7 @@ const navigateToItem = (itemId) => {
 
     <div v-else class="items-grid">
       <div
-          v-for="item in items"
+          v-for="item in filteredItems"
           :key="item.id"
           class="item-card"
           @click="navigateToItem(item.id)"
@@ -445,4 +464,6 @@ const navigateToItem = (itemId) => {
     gap: 15px;
   }
 }
+
+
 </style>
