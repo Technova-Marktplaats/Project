@@ -431,11 +431,6 @@ watch(canShowMap, async (canShow) => {
             </div>
           </div>
 
-          <div v-if="item.reservations && item.reservations.length > 0" class="info-section">
-            <h3>Reserveringen</h3>
-            <p>Dit item heeft {{ item.reservations.length }} reservering(en).</p>
-          </div>
-
           <div v-if="!isOwner && !hasReserved" class="info-section reserve-section">
             <div class="action-buttons">
               <button v-if="!reservationFormVisible" @click="showReservationForm" class="reserve-btn">

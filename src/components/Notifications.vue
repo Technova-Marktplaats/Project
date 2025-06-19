@@ -69,8 +69,8 @@ const getNotificationIcon = (type) => {
 const getNotificationClass = (notification) => {
   return {
     'notification-item': true,
-    'unread': !notification.read_at,
-    'read': !!notification.read_at
+    'unread': !notification.is_read,
+    'read': !!notification.is_read
   }
 }
 
@@ -81,7 +81,7 @@ const markAsRead = async (notification) => {
     // Update the notification in the local list
     const index = notifications.value.findIndex(n => n.id === notification.id)
     if (index !== -1) {
-      notifications.value[index].read_at = new Date().toISOString()
+      notifications.value[index].is_read = true
     }
     
     console.log('Notificatie gemarkeerd als gelezen')
@@ -133,7 +133,7 @@ onMounted(() => {
             {{ notifications.length }} {{ notifications.length === 1 ? 'bericht' : 'berichten' }}
           </span>
           <span class="unread-count">
-            {{ notifications.filter(n => !n.read_at).length }} ongelezen
+            {{ notifications.filter(n => !n.is_read).length }} ongelezen
           </span>
         </div>
 
@@ -148,7 +148,6 @@ onMounted(() => {
           
           <div class="notification-content">
             <div class="notification-header">
-              <h3 class="notification-title">{{ notification.title || 'Geen titel' }}</h3>
               <span class="notification-date">{{ formatDate(notification.created_at) }}</span>
             </div>
             
@@ -156,14 +155,14 @@ onMounted(() => {
             
             <div class="notification-meta">
               <button 
-                v-if="!notification.read_at" 
+                v-if="!notification.is_read" 
                 @click="markAsRead(notification)"
                 class="mark-read-btn"
                 title="Markeer als gelezen"
               >
                 ✓ Markeer als gelezen
               </button>
-              <span v-if="!notification.read_at" class="unread-indicator">●</span>
+              <span v-if="!notification.is_read" class="unread-indicator">●</span>
             </div>
           </div>
         </div>
@@ -354,31 +353,23 @@ onMounted(() => {
 
 .notification-header {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
+  justify-content: flex-end;
   margin-bottom: 8px;
-  gap: 15px;
-}
-
-.notification-title {
-  margin: 0;
-  font-size: 1.1em;
-  font-weight: 600;
-  color: #1f2937;
-  line-height: 1.3;
 }
 
 .notification-date {
   color: #6b7280;
   font-size: 0.85em;
   white-space: nowrap;
-  flex-shrink: 0;
+  font-weight: 500;
 }
 
 .notification-message {
   margin: 0 0 12px 0;
-  color: #4a5568;
+  color: #1f2937;
   line-height: 1.5;
+  font-size: 1em;
+  font-weight: 500;
 }
 
 .notification-meta {
@@ -435,13 +426,7 @@ onMounted(() => {
   }
   
   .notification-header {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
-  }
-  
-  .notification-title {
-    font-size: 1em;
+    justify-content: flex-start;
   }
   
   .notification-date {

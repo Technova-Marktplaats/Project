@@ -47,7 +47,7 @@ const fetchUnreadCount = async () => {
   
   try {
     const response = await apiService.notifications.getUnreadCount()
-    unreadCount.value = response.data.count || response.data.data?.count || 0
+    unreadCount.value = response.data.ongelezen_count || response.data.data?.ongelezen_count || 0
   } catch (error) {
     console.error('Fout bij ophalen ongelezen berichten:', error)
     // Fail silently - don't show errors for background requests
@@ -96,7 +96,7 @@ const navigationItems = [
 
 // Computed property for inbox display
 const inboxDisplay = computed(() => {
-  return unreadCount.value > 0 ? `Inbox (${unreadCount.value})` : 'Inbox'
+  return `Inbox`
 })
 
 // Check if route is active
