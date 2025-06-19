@@ -181,6 +181,34 @@ const onImageError = (event) => {
   }
 }
 
+const shareResult = ref('')
+
+const shareItem = async () => {
+  if (!item.value) return
+
+  const shareData = {
+    title: item.value.title,
+    text: item.value.description || 'Bekijk dit item op onze deelplatform!',
+    url: window.location.href
+  }
+
+  try {
+    if (navigator.share) {
+      await navigator.share(shareData)
+      shareResult.value = 'Item succesvol gedeeld!'
+    } else {
+      shareResult.value = 'Web Share API wordt niet ondersteund door je browser.'
+    }
+  } catch (err) {
+    console.error('Error sharing:', err)
+    shareResult.value = `Fout bij delen: ${err.message || err}`
+  }
+
+  // Clear the message after 3 seconds
+  setTimeout(() => {
+    shareResult.value = ''
+  }, 3000)
+}
 onMounted(async () => {
   await fetchItem()
   // Reserveringen ophalen nadat item is geladen
@@ -263,7 +291,6 @@ watch(item, (newItem) => {
                 <span>#{{ item.id }}</span>
               </div>
             </div>
-          </div>
 
           <div v-if="item.reservations && item.reservations.length > 0" class="info-section">
             <h3>Reserveringen</h3>
@@ -309,7 +336,6 @@ watch(item, (newItem) => {
               </div>
             </div>
           </div>
-
           <div v-if="!isOwner && hasReserved" class="info-section reserve-section">
             <p>Je hebt al een reservering geplaatst voor dit item.</p>
           </div>
@@ -338,6 +364,17 @@ watch(item, (newItem) => {
               </div>
             </div>
           </div>
+
+          <div class="share-section">
+            <button @click="shareItem" class="share-btn">
+              <span>Deel Deze Product met anderen in uw contacten!</span>
+            </button>
+            <p v-if="shareResult" class="share-result">{{ shareResult }}</p>
+          </div>
+        </div>
+
+
+
         </div>
       </div>
     </div>
@@ -697,5 +734,49 @@ watch(item, (newItem) => {
   background: #edf2f7;
   padding: 2px 8px;
   border-radius: 4px;
+}
+
+/* Share Button Styles */
+.share-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 20px;
+  padding-top: 15px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.share-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #4299e1;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.share-btn:hover {
+  background: #3182ce;
+}
+
+.share-result {
+  margin-top: 10px;
+  padding: 8px 16px;
+  border-radius: 4px;
+  background: #ebf8ff;
+  color: #2b6cb0;
+  font-size: 0.9em;
+  text-align: center;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 </style> 

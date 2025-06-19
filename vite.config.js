@@ -30,5 +30,10 @@ export default defineConfig({
         ]
       }
     })
-  ]
+  ],
+  server: {
+    // Use port 5174 for hosting otherwise it won't work
+    port: 5174,
+    strictPort: true,
+  }
 })
