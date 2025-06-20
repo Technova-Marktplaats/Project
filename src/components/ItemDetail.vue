@@ -443,6 +443,13 @@ watch(canShowMap, async (canShow) => {
               >
                 {{ watchlistLoading ? 'Laden...' : (isOnWatchlist ? '★ Op watchlist' : '☆ Toevoegen aan watchlist') }}
               </button>
+                  <div class="share-section">
+                <button @click="shareItem" class="share-btn">
+                  <span>Deel Deze Product met anderen in uw contacten!</span>
+                </button>
+                <p v-if="shareResult" class="share-result">{{ shareResult }}</p>
+              </div>
+            </div>
             </div>
             
             <div v-if="reservationFormVisible" class="reservation-form">
@@ -479,6 +486,7 @@ watch(canShowMap, async (canShow) => {
               </div>
             </div>
           </div>
+
 
           <div v-if="!isOwner && hasReserved" class="info-section reserve-section">
             <p>Je hebt al een reservering geplaatst voor dit item.</p>
@@ -1079,5 +1087,44 @@ watch(canShowMap, async (canShow) => {
   .location-section {
     padding: 20px;
   }
+  /* Share Button Styles */
+.share-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 20px;
+  padding-top: 15px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.share-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #4299e1;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.share-btn:hover {
+  background: #3182ce;
+}
+
+.share-result {
+  margin-top: 10px;
+  padding: 8px 16px;
+  border-radius: 4px;
+  background: #ebf8ff;
+  color: #2b6cb0;
+  font-size: 0.9em;
+  text-align: center;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
 }
 </style> 

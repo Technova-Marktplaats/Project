@@ -63,6 +63,13 @@ const initializeCacheStatus = async () => {
   cacheStatus.value = await cacheService.getCacheStatus()
 }
 
+// Const props voor search query van app.vue
+const props = defineProps({
+  search:{
+    type: String,
+    default: ''
+  }
+})
 onMounted(async () => {
   await fetchItems()
   await initializeCacheStatus()
