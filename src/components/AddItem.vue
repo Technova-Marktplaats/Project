@@ -20,6 +20,52 @@ const maxImages = 5
 const maxFileSize = 5 * 1024 * 1024 // 5MB per bestand
 const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
 
+//Camera Handling
+const videoRef = ref(null)
+const isPiPActive = ref(false)
+const capturedImage = ref(null)
+
+const initializeCamera = async () => {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+    if (videoRef.value) {
+      videoRef.value.srcObject = stream
+    }
+  } catch (err) {
+    console.error('Error accessing camera:', err)
+  }
+}
+const takePicture = () => {
+  const video = videoRef.value
+  if (!video) return
+
+  const canvas = document.createElement('canvas')
+  canvas.width = video.videoWidth
+  canvas.height = video.videoHeight
+  const ctx = canvas.getContext('2d')
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+
+  // Convert to data URL and store or do something with it
+  capturedImage.value = canvas.toDataURL('image/png')
+}
+
+// const togglePictureInPicture = async () => {
+//   try {
+//     const video = videoRef.value
+//     if (!video) return
+//
+//     if (!document.pictureInPictureElement) {
+//       await video.requestPictureInPicture()
+//       isPiPActive.value = true
+//     } else {
+//       await document.exitPictureInPicture()
+//       isPiPActive.value = false
+//     }
+//   } catch (err) {
+//     console.error('Error toggling PiP:', err)
+//   }
+// }
+
 // Form validation
 const formErrors = ref({
   title: '',
@@ -274,6 +320,8 @@ const handleDrop = (event) => {
 
 onMounted(() => {
   fetchCategories()
+  initializeCamera()
+
 })
 </script>
 
@@ -340,6 +388,17 @@ onMounted(() => {
 
         <div class="form-group">
           <label>Afbeeldingen (optioneel)</label>
+
+          <div v-if="capturedImage">
+            <h3>Captured Photo:</h3>
+            <img :src="capturedImage" alt="Captured Image" />
+          </div>
+
+          <div class="camera-preview">
+            <video ref="videoRef" autoplay playsinline></video>
+            <button type="button" @click="takePicture">{{ 'Maak heir en photo van de product die je wilt plaatsen' }}</button>
+          </div>
+
           <div 
             class="image-upload-area"
             :class="{ 'dragging': isDragging, 'error': formErrors.images }"

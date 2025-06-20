@@ -32,7 +32,7 @@ export default defineConfig({
     })
   ],
   server: {
-    // Use port 5174 for hosting otherwise it won't work
+    // Force to use port 5174 instead of 5173 to not have it crash with the database
     port: 5174,
     strictPort: true,
   }

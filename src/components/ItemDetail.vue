@@ -181,6 +181,8 @@ const onImageError = (event) => {
   }
 }
 
+
+//Het begin voor het deelen met contacten voor gebruikers
 const shareResult = ref('')
 
 const shareItem = async () => {
@@ -204,10 +206,9 @@ const shareItem = async () => {
     shareResult.value = `Fout bij delen: ${err.message || err}`
   }
 
-  // Clear the message after 3 seconds
   setTimeout(() => {
     shareResult.value = ''
-  }, 3000)
+  }, 3000) //Time out 3 secconden
 }
 onMounted(async () => {
   await fetchItem()
