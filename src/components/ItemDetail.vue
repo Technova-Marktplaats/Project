@@ -558,8 +558,7 @@ watch(canShowMap, async (canShow) => {
         </div>
       </div>
     </div>
-  </div>
-</template>
+  </template>
 
 <style scoped>
 .item-detail-container {
