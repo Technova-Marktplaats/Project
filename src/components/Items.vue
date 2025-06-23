@@ -1,13 +1,20 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import apiService from '../services/api'
+import cacheService from '../services/cache'
+import PWAInstallButton from './PWAInstallButton.vue'
 
 const router = useRouter()
 
 const items = ref([])
 const loading = ref(false)
 const error = ref(null)
+
+// Cache en offline status
+const isOffline = ref(!navigator.onLine)
+const cacheStatus = ref(null)
+let networkCleanup = null
 
 const fetchItems = async () => {
   loading.value = true
@@ -25,6 +32,11 @@ const fetchItems = async () => {
     } else {
       console.error('Unexpected response structure:', response.data)
       items.value = []
+    }
+    
+    // Cache items als ze succesvol zijn opgehaald
+    if (items.value.length > 0) {
+      await cacheService.cacheItems(items.value)
     }
   } catch (err) {
     console.error('Volledige fout:', err)
@@ -46,8 +58,36 @@ const fetchItems = async () => {
   }
 }
 
-onMounted(() => {
-  fetchItems()
+// Initialize cache status en network monitoring
+const initializeCacheStatus = async () => {
+  cacheStatus.value = await cacheService.getCacheStatus()
+}
+
+// Const props voor search query van app.vue
+const props = defineProps({
+  search:{
+    type: String,
+    default: ''
+  }
+})
+onMounted(async () => {
+  await fetchItems()
+  await initializeCacheStatus()
+  
+  // Monitor network changes
+  networkCleanup = cacheService.onNetworkChange((status) => {
+    isOffline.value = !status.online
+    if (status.online && items.value.length === 0) {
+      // Als we weer online komen en geen items hebben, probeer opnieuw
+      fetchItems()
+    }
+  })
+})
+
+onUnmounted(() => {
+  if (networkCleanup) {
+    networkCleanup()
+  }
 })
 
 const onImageError = (event) => {
@@ -63,23 +103,27 @@ const onImageError = (event) => {
 const navigateToItem = (itemId) => {
   router.push(`/item/${itemId}`)
 }
+
+
 </script>
 
 <template>
   <div class="items-container">
     <div class="header">
       <h2>Items Overzicht</h2>
-      <div class="header-actions">
-        <button @click="$router.push('/my-items')" class="my-items-btn">
-          <i class="fas fa-user"></i>
-          Mijn Items
-        </button>
-        <button @click="$router.push('/add-item')" class="add-item-btn">
-          + Nieuw Item
-        </button>
-        <button @click="fetchItems" :disabled="loading" class="refresh-btn">
-          {{ loading ? 'Laden...' : 'Vernieuwen' }}
-        </button>
+      
+      <div class="header-controls">
+        <div class="status-indicators">
+          <span v-if="isOffline" class="offline-indicator" title="Offline - cache wordt gebruikt">
+            📡 Offline
+          </span>
+        </div>
+        
+        <div class="header-actions">
+          <button @click="fetchItems" :disabled="loading" class="refresh-btn">
+            {{ loading ? 'Laden...' : 'Vernieuwen' }}
+          </button>
+        </div>
       </div>
     </div>
 
@@ -146,74 +190,80 @@ const navigateToItem = (itemId) => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 30px;
-  padding-bottom: 15px;
-  border-bottom: 2px solid #e2e8f0;
-  flex-wrap: wrap;
-  gap: 15px;
+  padding: 15px 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .header h2 {
-  color: #2d3748;
+  color: white;
   margin: 0;
+  font-weight: 600;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.header-actions {
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.status-indicators {
   display: flex;
   gap: 10px;
   align-items: center;
 }
 
-.my-items-btn {
-  background: #38a169;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 6px;
-  cursor: pointer;
+.offline-indicator {
+  background: rgba(254, 215, 215, 0.9);
+  color: #e53e3e;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.85em;
   font-weight: 500;
-  transition: background-color 0.2s;
+  border: 1px solid rgba(254, 178, 178, 0.8);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+
+
+.header-actions {
   display: flex;
+  gap: 12px;
   align-items: center;
-  gap: 8px;
-}
-
-.my-items-btn:hover {
-  background: #2f855a;
-}
-
-.add-item-btn {
-  background: #4299e1;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 500;
-  transition: background-color 0.2s;
-}
-
-.add-item-btn:hover {
-  background: #3182ce;
 }
 
 .refresh-btn {
-  background: #4299e1;
+  background: rgba(255, 255, 255, 0.2);
   color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 8px 16px;
+  border-radius: 20px;
   cursor: pointer;
   font-weight: 500;
-  transition: background-color 0.2s;
+  font-size: 0.9em;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .refresh-btn:hover:not(:disabled) {
-  background: #3182ce;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .refresh-btn:disabled {
-  background: #a0aec0;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.6);
   cursor: not-allowed;
+  transform: none;
 }
 
 .loading, .error, .no-items {
@@ -367,19 +417,39 @@ const navigateToItem = (itemId) => {
 @media (max-width: 768px) {
   .header {
     flex-direction: column;
-    align-items: stretch;
+    gap: 15px;
+    padding: 15px;
+  }
+  
+  .header h2 {
     text-align: center;
+    margin-bottom: 10px;
+  }
+  
+  .header-controls {
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  .status-indicators {
+    justify-content: center;
+    flex-wrap: wrap;
   }
   
   .header-actions {
     justify-content: center;
     flex-wrap: wrap;
+    gap: 8px;
   }
   
-  .add-item-btn,
   .refresh-btn {
-    flex: 1;
     min-width: 120px;
+    padding: 10px 16px;
+  }
+  
+  .items-grid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 15px;
   }
 }
 </style>

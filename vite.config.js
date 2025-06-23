@@ -10,12 +10,12 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'robots.txt'],
       manifest: {
-        name: 'My PWA App',
-        short_name: 'PWA',
+        name: 'Marktplaats App',
+        short_name: 'Marktplaats',
         start_url: '/',
         display: 'standalone',
         background_color: '#ffffff',
-        description: 'My Vue PWA App using Vite',
+        description: 'Marktplaats applicatie gebouwd met Vue en Vite',
         icons: [
           {
             src: 'pwa-192x192.png',
@@ -30,5 +30,24 @@ export default defineConfig({
         ]
       }
     })
-  ]
+  ],
+  publicDir: 'public',
+  // Dev server configuratie
+  server: {
+    // Use port 5174 for hosting otherwise it won't work
+    port: 5174,
+    strictPort: true,
+    // Zorg dat service worker correct wordt geserveerd in development
+    headers: {
+      'Service-Worker-Allowed': '/'
+    }
+  },
+  build: {
+    // Zorg dat service worker niet gebundeld wordt
+    rollupOptions: {
+      input: {
+        main: 'index.html'
+      }
+    }
+  }
 })
