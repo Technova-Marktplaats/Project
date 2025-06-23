@@ -1,6 +1,6 @@
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import {onMounted, ref} from 'vue'
+import {useRouter} from 'vue-router'
 import apiService from '../services/api.js'
 
 const router = useRouter()
@@ -20,9 +20,14 @@ const maxImages = 5
 const maxFileSize = 5 * 1024 * 1024 // 5MB per bestand
 const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
 
+//User permission pop up
+function NotificationTest() {
+
+}
+
+
 //Camera Handling
 const videoRef = ref(null)
-const isPiPActive = ref(false)
 const capturedImage = ref(null)
 
 const initializeCamera = async () => {
@@ -45,26 +50,27 @@ const takePicture = () => {
   const ctx = canvas.getContext('2d')
   ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
 
-  // Convert to data URL and store or do something with it
-  capturedImage.value = canvas.toDataURL('image/png')
-}
+  const dataUrl = canvas.toDataURL('image/png')
+  const base64Str = dataUrl.split(',')[1]
 
-// const togglePictureInPicture = async () => {
-//   try {
-//     const video = videoRef.value
-//     if (!video) return
-//
-//     if (!document.pictureInPictureElement) {
-//       await video.requestPictureInPicture()
-//       isPiPActive.value = true
-//     } else {
-//       await document.exitPictureInPicture()
-//       isPiPActive.value = false
-//     }
-//   } catch (err) {
-//     console.error('Error toggling PiP:', err)
-//   }
-// }
+  // Converteer base64 naar Blob
+  const byteString = atob(base64Str)
+  const arrayBuffer = new ArrayBuffer(byteString.length)
+  const intArray = new Uint8Array(arrayBuffer)
+  for (let i = 0; i < byteString.length; i++) {
+    intArray[i] = byteString.charCodeAt(i)
+  }
+
+  const blob = new Blob([intArray], { type: 'image/png' })
+  const filename = `camera-photo-${Date.now()}.png`
+  const file = new File([blob], filename, { type: 'image/png' })
+
+  // Voeg direct aan selectedImages toe
+  selectedImages.value.push(file)
+
+  // Optioneel: ook een preview
+  imagePreviewUrls.value.push({ id: Date.now() + Math.random(), url: dataUrl, base64: base64Str })
+}
 
 // Form validation
 const formErrors = ref({
@@ -155,21 +161,30 @@ const handleSubmit = async () => {
     console.log('Geselecteerde afbeeldingen:', selectedImages.value)
     
     // Voeg afbeeldingen toe - alleen als er daadwerkelijk bestanden zijn
+    if (capturedImage.value) {
+      fetch(capturedImage.value).then(res => res.blob()).then(blob => {
+        const filename = `camera-photo-${Date.now()}.png`;
+        const file = new File([blob], filename, { type: 'image/png' });
+        selectedImages.value.push(file);
+      }).catch(err => {
+        console.error('Fout bij converteren van camerabeeld naar File:', err);
+      });
+    }
+
     if (selectedImages.value.length > 0) {
       selectedImages.value.forEach((file, index) => {
-        console.log(`Afbeelding ${index}:`, file.name, file.type, file.size)
-        // Controleer of het echt een File object is
+        console.log(`Afbeelding ${index}:`, file.name, file.type, file.size);
         if (file instanceof File) {
-          formDataToSend.append('images[]', file)
-          console.log(`File ${index} toegevoegd aan FormData`)
+          formDataToSend.append('images[]', file);
+          console.log(`File ${index} toegevoegd aan FormData`);
         } else {
-          console.error(`Item ${index} is geen File object:`, typeof file, file)
+          console.error(`Item ${index} is geen File object:`, typeof file, file);
         }
-      })
+      });
     } else {
-      console.log('Geen afbeeldingen geselecteerd')
+      console.log('Geen afbeeldingen geselecteerd');
     }
-    
+
     // Debug FormData inhoud
     console.log('FormData entries:')
     let hasFiles = false
@@ -279,12 +294,15 @@ const addImages = (files) => {
     // Maak preview URL
     const reader = new FileReader()
     reader.onload = (e) => {
+      selectedImages.value.push(e.target.result.split(',')[1])
       imagePreviewUrls.value.push({
         id: Date.now() + Math.random(),
         url: e.target.result,
-        file: file
+        base64: e.target.result.split(',')[1]
       })
     }
+
+
     reader.readAsDataURL(file)
   })
 }
@@ -319,6 +337,7 @@ const handleDrop = (event) => {
 }
 
 onMounted(() => {
+
   fetchCategories()
   initializeCamera()
 
