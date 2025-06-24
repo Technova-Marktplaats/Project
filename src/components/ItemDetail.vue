@@ -335,6 +335,33 @@ const onImageError = (event) => {
     parent.innerHTML = '<div class="no-image"><span>Afbeelding niet beschikbaar</span></div>'
   }
 }
+const shareResult = ref('')
+
+const shareItem = async () => {
+  if (!item.value) return
+
+  const shareData = {
+    title: item.value.title,
+    text: item.value.description || 'Bekijk dit item op onze deelplatform!',
+    url: window.location.href
+  }
+
+  try {
+    if (navigator.share) {
+      await navigator.share(shareData)
+      shareResult.value = 'Item succesvol gedeeld!'
+    } else {
+      shareResult.value = 'Web Share API wordt niet ondersteund door je browser.'
+    }
+  } catch (err) {
+    console.error('Error sharing:', err)
+    shareResult.value = `Fout bij delen: ${err.message || err}`
+  }
+
+  setTimeout(() => {
+    shareResult.value = ''
+  }, 3000) //Time out 3 secconden
+}
 
 onMounted(async () => {
   await fetchItem()
@@ -445,7 +472,7 @@ watch(canShowMap, async (canShow) => {
               </button>
                   <div class="share-section">
                 <button @click="shareItem" class="share-btn">
-                  <span>Deel Deze Product met anderen in uw contacten!</span>
+                  <span>Deel dit product met anderen in uw contacten!</span>
                 </button>
                 <p v-if="shareResult" class="share-result">{{ shareResult }}</p>
               </div>

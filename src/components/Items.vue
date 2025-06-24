@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import apiService from '../services/api'
 import cacheService from '../services/cache'
@@ -104,6 +104,20 @@ const navigateToItem = (itemId) => {
   router.push(`/item/${itemId}`)
 }
 
+// Functie voor zoeken
+const filteredItems = computed(() => {
+  if (!props.search || props.search.trim() === '') {
+    return items.value
+  }
+  
+  const query = props.search.toLowerCase()
+  return items.value.filter(item =>
+      item.title?.toLowerCase().includes(query) ||
+      item.description?.toLowerCase().includes(query) ||
+      item.category?.name?.toLowerCase().includes(query)
+  )
+})
+
 
 </script>
 
@@ -140,9 +154,14 @@ const navigateToItem = (itemId) => {
       <p>Geen items gevonden.</p>
     </div>
 
+    <div v-else-if="filteredItems.length === 0 && props.search" class="no-items">
+      <p>Geen items gevonden voor "{{ props.search }}".</p>
+      <p class="search-help">Probeer een andere zoekterm of check je spelling.</p>
+    </div>
+
     <div v-else class="items-grid">
       <div 
-        v-for="item in items" 
+        v-for="item in filteredItems" 
         :key="item.id" 
         class="item-card"
         @click="navigateToItem(item.id)"
@@ -270,6 +289,12 @@ const navigateToItem = (itemId) => {
   text-align: center;
   padding: 40px;
   color: #4a5568;
+}
+
+.search-help {
+  color: #718096;
+  font-size: 0.9em;
+  margin-top: 8px;
 }
 
 .error {

@@ -18,7 +18,7 @@ export const API_CONFIG = {
   ENVIRONMENTS: {
     development: 'http://localhost/LaravelBackend/public/api',
     staging: 'http://staging.marktplaats.com/api', 
-    production: 'http://srv856957.hstgr.cloud/mp/api'
+    production: 'http://srv856957.hstgr.cloud/api'
   }
 }
 

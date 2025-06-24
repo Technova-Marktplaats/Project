@@ -1,8 +1,16 @@
 <script setup>
+import { ref } from 'vue'
 import { useAuthStore } from './stores/auth'
 import NavigationMenu from './components/NavigationMenu.vue'
 
 const authStore = useAuthStore()
+
+// Search functionaliteit
+const currentSearchQuery = ref('')
+
+const handleSearchChange = (searchQuery) => {
+  currentSearchQuery.value = searchQuery
+}
 
 </script>
 
@@ -15,10 +23,13 @@ const authStore = useAuthStore()
     </header>
     
     <!-- Navigation Menu -->
-    <NavigationMenu v-if="authStore.isLoggedIn" />
+    <NavigationMenu 
+      v-if="authStore.isLoggedIn" 
+      @search-change="handleSearchChange"
+    />
     
     <main>
-      <router-view />
+      <router-view :search="currentSearchQuery" />
     </main>
   </div>
 </template>

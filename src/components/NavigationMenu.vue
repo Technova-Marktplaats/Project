@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import PWAInstallButton from './PWAInstallButton.vue'
@@ -99,6 +99,17 @@ const inboxDisplay = computed(() => {
   return `Inbox`
 })
 
+// Search functionality
+const searchQuery = ref('')
+
+// Emits voor het doorgeven van search query aan parent/router
+const emit = defineEmits(['search-change'])
+
+// Watch voor search query changes
+watch(searchQuery, (newQuery) => {
+  emit('search-change', newQuery)
+})
+
 // Check if route is active
 const isActiveRoute = (path) => {
   if (path === '/') {
@@ -127,8 +138,6 @@ onUnmounted(() => {
     clearInterval(notificationInterval)
   }
 })
-
-const searchQuery = ref('');
 </script>
 
 <template>
@@ -137,6 +146,7 @@ const searchQuery = ref('');
     <div class="desktop-nav">
       <div class="nav-container">
         <div class="nav-items">
+          <!-- Rij 1: Menu items -->
           <div class="nav-main-items">
             <button
               v-for="item in navigationItems"
@@ -161,9 +171,25 @@ const searchQuery = ref('');
             </button>
           </div>
           
-          <!-- User Section & PWA Install Button -->
-          <div class="nav-right-section">
-            <!-- User Dropdown -->
+          <!-- Rij 2: PWA Install Button (links), Search Container (midden), User Dropdown (rechts) -->
+          <div class="nav-secondary-row">
+            <!-- PWA Install Button - links -->
+            <div class="nav-pwa-container">
+              <PWAInstallButton />
+            </div>
+            
+            <!-- Search Container - midden -->
+            <div class="search-container">
+              <input
+                class="input"
+                name="text"
+                placeholder="Zoek..."
+                type="search"
+                v-model="searchQuery"
+              />
+            </div>
+            
+            <!-- User Dropdown - rechts -->
             <div class="nav-user-section">
               <div class="nav-user-dropdown" @click.stop>
                 <button @click="toggleUserDropdown" class="nav-user-btn">
@@ -190,11 +216,6 @@ const searchQuery = ref('');
                   </button>
                 </div>
               </div>
-            </div>
-            
-            <!-- PWA Install Button -->
-            <div class="nav-pwa-container">
-              <PWAInstallButton />
             </div>
           </div>
         </div>
@@ -247,16 +268,16 @@ const searchQuery = ref('');
               </div>
               <span v-if="unreadCount > 0" class="mobile-unread-badge">{{ unreadCount }}</span>
             </button>
-            <main>
-            <input
-                class="input"
+            <div class="mobile-search-container">
+              <input
+                class="mobile-search-input"
                 name="text"
-                placeholder="Search..."
+                placeholder="Zoek..."
                 type="search"
                 v-model="searchQuery"
-            />
-            <router-view :search="searchQuery" />
-            </main>
+              />
+            </div>
+
                           <!-- PWA Install Button for Mobile -->
             <div class="mobile-pwa-container">
               <PWAInstallButton />
@@ -305,10 +326,10 @@ main {
 
 .nav-items {
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
   align-items: center;
   padding: 16px 0;
-  gap: 20px;
+  gap: 16px;
 }
 
 .nav-main-items {
@@ -379,14 +400,49 @@ main {
   border: 2px solid rgba(255, 255, 255, 0.3);
 }
 
-.nav-right-section {
+/* Rij 2: PWA, Search, User layout */
+.nav-secondary-row {
   display: flex;
+  justify-content: center;
   align-items: center;
-  gap: 15px;
+  width: 100%;
+  max-width: 1200px;
+  gap: 40px;
+  padding: 0 60px;
+}
+
+.search-container {
+  flex: 1;
+  max-width: 400px;
+  min-width: 250px;
+}
+
+.search-container .input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 25px;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  font-size: 0.9em;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+.search-container .input::placeholder {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.search-container .input:focus {
+  outline: none;
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.5);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
 }
 
 .nav-user-section {
   position: relative;
+  flex-shrink: 0;
 }
 
 .nav-user-dropdown {
@@ -484,11 +540,14 @@ main {
 .nav-pwa-container {
   display: flex;
   align-items: center;
+  justify-content: center;
   padding: 8px 16px;
   border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);
+  min-width: 120px;
+  flex-shrink: 0;
 }
 
 /* Mobile Navigation */
@@ -687,6 +746,33 @@ main {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+.mobile-search-container {
+  padding: 16px;
+  border-top: 1px solid #e2e8f0;
+  margin-top: 8px;
+}
+
+.mobile-search-input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 25px;
+  background: white;
+  color: #374151;
+  font-size: 0.9em;
+  transition: all 0.3s ease;
+}
+
+.mobile-search-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.mobile-search-input::placeholder {
+  color: #9ca3af;
+}
+
 .mobile-pwa-container {
   padding: 16px;
   border-top: 1px solid #e2e8f0;
@@ -771,10 +857,33 @@ main {
     padding: 12px 16px;
   }
   
-  .nav-right-section {
+  .nav-secondary-row {
     flex-direction: column;
-    gap: 12px;
+    gap: 6px;
     width: 100%;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 16px 0 0 0;
+  }
+  
+  .search-container {
+    width: 100%;
+    max-width: none;
+    order: 1;
+  }
+  
+  .nav-user-section {
+    order: 2;
+    width: 100%;
+    text-align: center;
+  }
+  
+  .nav-pwa-container {
+    order: 3;
+    width: 100%;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 12px;
+    border-radius: 8px;
   }
   
   .nav-user-btn span {
@@ -783,15 +892,6 @@ main {
   
   .nav-dropdown-menu {
     right: -10px;
-  }
-  
-  .nav-pwa-container {
-    width: 100%;
-    justify-content: center;
-    margin-top: 8px;
-    border-top: 1px solid rgba(255, 255, 255, 0.2);
-    padding-top: 16px;
-    background: rgba(255, 255, 255, 0.05);
   }
 }
 
