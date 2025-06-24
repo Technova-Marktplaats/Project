@@ -361,7 +361,6 @@ const shareItem = async () => {
   setTimeout(() => {
     shareResult.value = ''
   }, 3000) //Time out 3 secconden
-  }, 3000) //Time out 3 secconden
 }
 
 onMounted(async () => {

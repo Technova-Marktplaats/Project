@@ -415,7 +415,7 @@ onMounted(() => {
 
           <div class="camera-preview">
             <video ref="videoRef" autoplay playsinline></video>
-            <button type="button" @click="takePicture">{{ 'Maak heir en photo van de product die je wilt plaatsen' }}</button>
+            <button type="button" @click="takePicture">{{ 'Maak hier een foto van het product dat je wilt plaatsen' }}</button>
           </div>
 
           <div 
