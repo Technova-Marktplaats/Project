@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host",
-    "build": "vite build",
+    "build": "vite build && node scripts/update-sw.js",
+    "build:only": "vite build",
+    "postbuild": "node scripts/update-sw.js",
     "preview": "vite preview"
   },
   "dependencies": {
