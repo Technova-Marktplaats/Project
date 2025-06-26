@@ -30,14 +30,16 @@ window.addEventListener('beforeinstallprompt', (e) => {
   console.log('Platform:', e.platforms)
 })
 
-// Service Worker registratie
+// Service Worker registratie en PWA functionaliteit
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', async () => {
     try {
-      const registration = await navigator.serviceWorker.register('/sw.js')
+      const registration = await navigator.serviceWorker.register('/sw.js', {
+        scope: '/'
+      })
       console.log('✅ Service Worker geregistreerd:', registration.scope)
       
-      // Luister naar updates (maar niet te vaak)
+      // Luister naar updates
       let updateCheckInProgress = false
       registration.addEventListener('updatefound', () => {
         if (updateCheckInProgress) return
@@ -49,8 +51,8 @@ if ('serviceWorker' in navigator) {
         newWorker.addEventListener('statechange', () => {
           if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
             console.log('🆕 Nieuwe Service Worker beschikbaar')
-            // Stille update - geen popup in development
-            if (process.env.NODE_ENV === 'production') {
+            // Stille update - alleen popup in productie
+            if (import.meta.env.PROD) {
               if (confirm('Er is een update beschikbaar. Wil je de pagina herladen?')) {
                 window.location.reload()
               }
@@ -63,10 +65,31 @@ if ('serviceWorker' in navigator) {
         })
       })
       
+      // PWA installatie status checken
+      if (registration.active) {
+        console.log('📱 PWA is klaar voor installatie')
+      }
+      
     } catch (error) {
       console.error('❌ Service Worker registratie mislukt:', error)
     }
   })
+  
+  // Online/Offline status monitoring
+  window.addEventListener('online', () => {
+    console.log('🌐 Internetverbinding hersteld')
+    // Trigger een sync als gewenst
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({
+        type: 'SYNC_DATA'
+      })
+    }
+  })
+  
+  window.addEventListener('offline', () => {
+    console.log('📵 Offline modus geactiveerd')
+  })
+  
 } else {
   console.log('⚠️ Service Worker wordt niet ondersteund in deze browser')
 }

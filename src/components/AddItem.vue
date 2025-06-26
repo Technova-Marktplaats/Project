@@ -30,14 +30,54 @@ function NotificationTest() {
 const videoRef = ref(null)
 const capturedImage = ref(null)
 
+const cameraError = ref('')
+const cameraSupported = ref(true)
+
 const initializeCamera = async () => {
+  // Check if camera is supported
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    cameraError.value = 'Camera wordt niet ondersteund door deze browser'
+    cameraSupported.value = false
+    return
+  }
+
+  // Check if HTTPS is required
+  if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+    cameraError.value = 'Camera vereist HTTPS verbinding. Schakel HTTPS in op je server.'
+    cameraSupported.value = false
+    return
+  }
+
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false })
     if (videoRef.value) {
       videoRef.value.srcObject = stream
     }
+    cameraError.value = ''
   } catch (err) {
     console.error('Error accessing camera:', err)
+    
+    // Provide user-friendly error messages
+    switch (err.name) {
+      case 'NotAllowedError':
+        cameraError.value = 'Camera toegang geweigerd. Sta camera toe in je browser instellingen.'
+        break
+      case 'NotFoundError':
+        cameraError.value = 'Geen camera gevonden op dit apparaat.'
+        break
+      case 'NotReadableError':
+        cameraError.value = 'Camera is al in gebruik door een andere applicatie.'
+        break
+      case 'OverconstrainedError':
+        cameraError.value = 'Camera voldoet niet aan de vereisten.'
+        break
+      case 'SecurityError':
+        cameraError.value = 'Camera toegang geblokkeerd om veiligheidsredenen. Controleer of je site HTTPS gebruikt.'
+        break
+      default:
+        cameraError.value = `Camera fout: ${err.message}`
+    }
+    cameraSupported.value = false
   }
 }
 const takePicture = () => {
@@ -413,9 +453,24 @@ onMounted(() => {
             <img :src="capturedImage" alt="Captured Image" />
           </div>
 
-          <div class="camera-preview">
+          <div v-if="cameraSupported && !cameraError" class="camera-preview">
             <video ref="videoRef" autoplay playsinline></video>
-            <button type="button" @click="takePicture">{{ 'Maak hier een foto van het product dat je wilt plaatsen' }}</button>
+            <button type="button" @click="takePicture" class="camera-btn">
+              📸 Maak foto van het product
+            </button>
+          </div>
+          
+          <div v-else-if="cameraError" class="camera-error">
+            <div class="camera-error-icon">📷</div>
+            <p>{{ cameraError }}</p>
+            <div v-if="cameraError.includes('HTTPS')" class="https-info">
+              <h4>💡 Om camera te gebruiken:</h4>
+              <ul>
+                <li>Zorg dat je website HTTPS gebruikt</li>
+                <li>Of test lokaal op localhost</li>
+                <li>Camera werkt niet op HTTP sites om veiligheidsredenen</li>
+              </ul>
+            </div>
           </div>
 
           <div 
@@ -838,5 +893,106 @@ onMounted(() => {
 
 .remove-image-btn:hover {
   background: rgba(239, 68, 68, 1);
+}
+
+/* Camera Styles */
+.camera-preview {
+  background: #f8fafc;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.camera-preview video {
+  width: 100%;
+  max-width: 400px;
+  height: auto;
+  border-radius: 8px;
+  background: #000;
+  margin-bottom: 15px;
+}
+
+.camera-btn {
+  background: #059669;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 1em;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.1s;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.camera-btn:hover {
+  background: #047857;
+  transform: translateY(-1px);
+}
+
+.camera-error {
+  background: #fef2f2;
+  border: 2px solid #fecaca;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+  text-align: center;
+  color: #b91c1c;
+}
+
+.camera-error-icon {
+  font-size: 3em;
+  margin-bottom: 10px;
+  opacity: 0.7;
+}
+
+.camera-error p {
+  margin: 10px 0;
+  font-weight: 500;
+  font-size: 1.1em;
+}
+
+.https-info {
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid #93c5fd;
+  border-radius: 8px;
+  padding: 15px;
+  margin-top: 15px;
+  color: #1e40af;
+  text-align: left;
+}
+
+.https-info h4 {
+  margin: 0 0 10px 0;
+  color: #1e40af;
+}
+
+.https-info ul {
+  margin: 10px 0 0 20px;
+  padding: 0;
+}
+
+.https-info li {
+  margin-bottom: 5px;
+  font-size: 0.95em;
+}
+
+@media (max-width: 768px) {
+  .camera-preview {
+    padding: 15px;
+  }
+  
+  .camera-preview video {
+    max-width: 100%;
+  }
+  
+  .camera-btn {
+    font-size: 0.9em;
+    padding: 10px 20px;
+  }
 }
 </style> 

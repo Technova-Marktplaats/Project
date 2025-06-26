@@ -6,9 +6,9 @@ const STATIC_CACHE_NAME = 'marktplaats-static-v1'
 const STATIC_URLS = [
   '/',
   '/index.html',
-  '/src/main.js',
-  '/src/App.vue',
-  '/src/style.css'
+  '/manifest.json',
+  '/icon.svg',
+  '/vite.svg'
 ]
 
 // API endpoints die we willen cachen
@@ -219,6 +219,17 @@ self.addEventListener('message', (event) => {
           event.ports[0].postMessage(status)
         })
         break
+        
+      case 'SYNC_DATA':
+        // Sync data when back online
+        console.log('🔄 Sync data triggered - refreshing caches')
+        syncDataWhenOnline()
+        break
+        
+      case 'SKIP_WAITING':
+        // Force update service worker
+        self.skipWaiting()
+        break
     }
   }
 })
@@ -300,5 +311,36 @@ async function getCacheStatus() {
     }
   } catch (error) {
     return { error: error.message }
+  }
+}
+
+// Sync data when coming back online
+async function syncDataWhenOnline() {
+  try {
+    // Refresh cache for main API endpoints
+    const cache = await caches.open(API_CACHE_NAME)
+    
+    // Try to fetch fresh data for items
+    try {
+      const itemsResponse = await fetch('/api/items')
+      if (itemsResponse.ok) {
+        await cache.put('/api/items', itemsResponse.clone())
+        console.log('🔄 Items cache bijgewerkt na online komen')
+      }
+    } catch (error) {
+      console.log('⚠️ Could not sync items:', error)
+    }
+    
+    // Notify all clients about the sync
+    const clients = await self.clients.matchAll()
+    clients.forEach(client => {
+      client.postMessage({
+        type: 'SYNC_COMPLETE',
+        timestamp: new Date().toISOString()
+      })
+    })
+    
+  } catch (error) {
+    console.error('❌ Sync failed:', error)
   }
 } 
