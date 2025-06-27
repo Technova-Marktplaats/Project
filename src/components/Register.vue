@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { getGoogleRedirectUrl } from '../config/api'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -86,7 +87,9 @@ const handleSubmit = async () => {
 
 const handleGoogleLogin = async () => {
   try {
-    const response = await fetch('http://localhost/LaravelBackend/public/api/auth/google/redirect', {
+    const googleRedirectUrl = getGoogleRedirectUrl()
+    
+    const response = await fetch(googleRedirectUrl, {
       method: 'GET',
       credentials: 'include',
       headers: {

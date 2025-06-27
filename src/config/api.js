@@ -19,6 +19,11 @@ export const API_CONFIG = {
     development: 'http://localhost/LaravelBackend/public/api',
     staging: 'http://staging.marktplaats.com/api', 
     production: 'http://srv856957.hstgr.cloud/api'
+  },
+
+  // Google Auth endpoints
+  GOOGLE_AUTH: {
+    REDIRECT: '/auth/google/redirect'
   }
 }
 
@@ -35,4 +40,10 @@ export const setEnvironment = (env) => {
     return url
   }
   throw new Error(`Onbekende environment: ${env}`)
+}
+
+// Helper om Google auth redirect URL te krijgen
+export const getGoogleRedirectUrl = (environment = 'production') => {
+  const baseUrl = getApiUrl(environment)
+  return `${baseUrl}${API_CONFIG.GOOGLE_AUTH.REDIRECT}`
 } 
