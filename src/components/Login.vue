@@ -60,31 +60,11 @@ const handleSubmit = async () => {
   // Errors worden automatisch getoond via de store
 }
 
-const handleGoogleLogin = async () => {
+const handleGoogleLogin = () => {
   try {
     const googleRedirectUrl = getGoogleRedirectUrl()
-    
-    const response = await fetch(googleRedirectUrl, {
-      method: 'GET',
-      credentials: 'include',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
-      }
-    })
-
-    if (!response.ok) {
-      throw new Error('Netwerk response was niet ok')
-    }
-
-    const data = await response.json()
-    
-    if (data.url) {
-      // Simpele redirect naar Google
-      window.location.href = data.url
-    } else {
-      throw new Error('Geen redirect URL ontvangen van de server')
-    }
+    // Direct redirect - no fetch needed
+    window.location.href = googleRedirectUrl
   } catch (error) {
     console.error('Fout bij Google login:', error)
     authStore.setError('Er is een fout opgetreden bij Google login')

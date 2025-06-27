@@ -46,4 +46,4 @@ export const setEnvironment = (env) => {
 export const getGoogleRedirectUrl = (environment = 'production') => {
   const baseUrl = getApiUrl(environment)
   return `${baseUrl}${API_CONFIG.GOOGLE_AUTH.REDIRECT}`
-} 
+}
