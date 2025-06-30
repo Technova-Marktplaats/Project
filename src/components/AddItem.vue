@@ -20,12 +20,6 @@ const maxImages = 5
 const maxFileSize = 5 * 1024 * 1024 // 5MB per bestand
 const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
 
-//User permission pop up
-function NotificationTest() {
-
-}
-
-
 //Camera Handling
 const videoRef = ref(null)
 const capturedImage = ref(null)
@@ -149,17 +143,17 @@ const handleSubmit = async () => {
   try {
     // Maak FormData voor file upload
     const formDataToSend = new FormData()
-    
+
     // Voeg tekst velden toe
     formDataToSend.append('title', formData.value.title.trim())
     formDataToSend.append('description', formData.value.description.trim())
     formDataToSend.append('category_id', formData.value.category)
     formDataToSend.append('available', formData.value.available ? '1' : '0')
-    
+
     // Debug logging
     console.log('Aantal geselecteerde afbeeldingen:', selectedImages.value.length)
     console.log('Geselecteerde afbeeldingen:', selectedImages.value)
-    
+
     // Voeg afbeeldingen toe - alleen als er daadwerkelijk bestanden zijn
     if (capturedImage.value) {
       fetch(capturedImage.value).then(res => res.blob()).then(blob => {
@@ -196,17 +190,17 @@ const handleSubmit = async () => {
         console.log(pair[0], pair[1])
       }
     }
-    
+
     console.log('FormData bevat bestanden:', hasFiles)
     console.log('Totaal FormData entries:', Array.from(formDataToSend.entries()).length)
 
     const response = await apiService.items.createWithImages(formDataToSend)
-    
+
     console.log('Item aangemaakt:', response.data)
-    
+
     // Redirect naar item detail pagina of items lijst
     router.push('/')
-    
+
   } catch (err) {
     console.error('Fout bij aanmaken item:', err)
     console.error('Response data:', err.response?.data)
@@ -412,10 +406,10 @@ onMounted(() => {
             <h3>Captured Photo:</h3>
             <img :src="capturedImage" alt="Captured Image" />
           </div>
-
+          <div><h5>{{"maakt en photo of kies ze van uw bestanden, deze moet je niet mixen"}}</h5></div>
           <div class="camera-preview">
             <video ref="videoRef" autoplay playsinline></video>
-            <button type="button" @click="takePicture">{{ 'Maak heir en photo van de product die je wilt plaatsen' }}</button>
+            <button type="button" @click="takePicture">{{ 'Maak en Foto!' }}</button>
           </div>
 
           <div 
