@@ -1,7 +1,7 @@
 <script>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import apiService from '../services/api.js'
+import apiService from '../services/api'
 
 export default {
   name: 'MyItems',

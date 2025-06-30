@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { API_CONFIG } from '../config/api.js'
+import { API_CONFIG } from '../config/api'
 
 // Axios instance maken met configuratie
 const apiClient = axios.create({
@@ -96,8 +96,20 @@ export const apiService = {
     getMyItemReservations: (params) => apiClient.get('/reservations/my-items', { params }),
     create: (reservationData) => apiClient.post('/reservations', reservationData),
     approve: (id) => apiClient.post(`/reservations/${id}/approve`),
-    reject: (id) => apiClient.post(`/reservations/${id}/reject`),
-    delete: (id) => apiClient.delete(`/reservations/${id}`)
+    reject: (id) => apiClient.post(`/reservations/${id}/reject`)
+  },
+
+  // Watchlist endpoints
+  watchlist: {
+    add: (id) => apiClient.post(`/watchlist/${id}/add`),
+    remove: (id) => apiClient.post(`/watchlist/${id}/remove`)
+  },
+
+  // Notifications endpoints
+  notifications: {
+    getUnreadCount: () => apiClient.get('/notifications/unread-count'),
+    getAll: () => apiClient.get('/notifications'),
+    markAsRead: (id) => apiClient.put(`/notifications/${id}/read`)
   },
 
   // Utility functions

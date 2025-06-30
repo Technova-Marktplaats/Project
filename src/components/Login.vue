@@ -1,7 +1,8 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAuthStore } from '../stores/auth.js'
+import { useAuthStore } from '../stores/auth'
+import { getGoogleRedirectUrl } from '../config/api'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -57,6 +58,17 @@ const handleSubmit = async () => {
     router.push('/')
   }
   // Errors worden automatisch getoond via de store
+}
+
+const handleGoogleLogin = () => {
+  try {
+    const googleRedirectUrl = getGoogleRedirectUrl()
+    // Direct redirect - no fetch needed
+    window.location.href = googleRedirectUrl
+  } catch (error) {
+    console.error('Fout bij Google login:', error)
+    authStore.setError('Er is een fout opgetreden bij Google login')
+  }
 }
 
 const clearError = () => {
@@ -116,6 +128,19 @@ onMounted(() => {
           :disabled="authStore.loading"
         >
           {{ authStore.loading ? 'Bezig met inloggen...' : 'Inloggen' }}
+        </button>
+
+        <div class="divider">
+          <span>of</span>
+        </div>
+
+        <button 
+          type="button" 
+          class="google-btn"
+          @click="handleGoogleLogin"
+        >
+          <img src="../assets/google-icon.svg" alt="Google" class="google-icon" />
+          Inloggen met Google
         </button>
       </form>
 
@@ -259,6 +284,53 @@ onMounted(() => {
 
 .login-footer a:hover {
   text-decoration: underline;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 20px 0;
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.divider span {
+  padding: 0 10px;
+  color: #6b7280;
+  font-size: 0.9em;
+}
+
+.google-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: white;
+  color: #374151;
+  border: 2px solid #e5e7eb;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 1em;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.1s;
+  width: 100%;
+}
+
+.google-btn:hover {
+  background: #f9fafb;
+  transform: translateY(-1px);
+}
+
+.google-icon {
+  width: 20px;
+  height: 20px;
 }
 
 @media (max-width: 480px) {

@@ -1,10 +1,13 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useAuthStore } from '../stores/auth'
 import PWAInstallButton from './PWAInstallButton.vue'
+import apiService from '../services/api'
 
 const route = useRoute()
 const router = useRouter()
+const authStore = useAuthStore()
 
 // Mobile menu toggle
 const isMobileMenuOpen = ref(false)
@@ -15,6 +18,46 @@ const toggleMobileMenu = () => {
 
 const closeMobileMenu = () => {
   isMobileMenuOpen.value = false
+}
+
+// User dropdown toggle
+const showUserDropdown = ref(false)
+
+const toggleUserDropdown = () => {
+  showUserDropdown.value = !showUserDropdown.value
+}
+
+const closeUserDropdown = () => {
+  showUserDropdown.value = false
+}
+
+const handleLogout = async () => {
+  await authStore.logout()
+  showUserDropdown.value = false
+  router.push('/login')
+}
+
+// Inbox/Notifications state
+const unreadCount = ref(0)
+let notificationInterval = null
+
+// Fetch unread notifications count
+const fetchUnreadCount = async () => {
+  if (!authStore.isLoggedIn) return
+  
+  try {
+    const response = await apiService.notifications.getUnreadCount()
+    unreadCount.value = response.data.ongelezen_count || response.data.data?.ongelezen_count || 0
+  } catch (error) {
+    console.error('Fout bij ophalen ongelezen berichten:', error)
+    // Fail silently - don't show errors for background requests
+  }
+}
+
+// Navigate to inbox/notifications
+const goToInbox = () => {
+  router.push('/notifications')
+  closeMobileMenu()
 }
 
 // Navigation items
@@ -51,6 +94,22 @@ const navigationItems = [
   }
 ]
 
+// Computed property for inbox display
+const inboxDisplay = computed(() => {
+  return `Inbox`
+})
+
+// Search functionality
+const searchQuery = ref('')
+
+// Emits voor het doorgeven van search query aan parent/router
+const emit = defineEmits(['search-change'])
+
+// Watch voor search query changes
+watch(searchQuery, (newQuery) => {
+  emit('search-change', newQuery)
+})
+
 // Check if route is active
 const isActiveRoute = (path) => {
   if (path === '/') {
@@ -64,14 +123,30 @@ const navigateTo = (path) => {
   router.push(path)
   closeMobileMenu()
 }
+
+// Setup and cleanup
+onMounted(() => {
+  if (authStore.isLoggedIn) {
+    fetchUnreadCount()
+    // Refresh every 30 seconds
+    notificationInterval = setInterval(fetchUnreadCount, 30000)
+  }
+})
+
+onUnmounted(() => {
+  if (notificationInterval) {
+    clearInterval(notificationInterval)
+  }
+})
 </script>
 
 <template>
-  <nav class="navigation-menu">
+  <nav class="navigation-menu" @click="closeUserDropdown">
     <!-- Desktop Navigation -->
     <div class="desktop-nav">
       <div class="nav-container">
         <div class="nav-items">
+          <!-- Rij 1: Menu items -->
           <div class="nav-main-items">
             <button
               v-for="item in navigationItems"
@@ -83,10 +158,65 @@ const navigateTo = (path) => {
               <span class="nav-icon">{{ item.icon }}</span>
               <span class="nav-text">{{ item.name }}</span>
             </button>
+            
+            <!-- Inbox Button -->
+            <button
+              @click="goToInbox"
+              :class="['nav-item', 'inbox-item', { 'active': isActiveRoute('/notifications') }]"
+              title="Berichten en notificaties"
+            >
+              <span class="nav-icon">📧</span>
+              <span class="nav-text">{{ inboxDisplay }}</span>
+              <span v-if="unreadCount > 0" class="unread-badge">{{ unreadCount }}</span>
+            </button>
           </div>
-          <!-- PWA Install Button -->
-          <div class="nav-pwa-container">
-            <PWAInstallButton />
+          
+          <!-- Rij 2: PWA Install Button (links), Search Container (midden), User Dropdown (rechts) -->
+          <div class="nav-secondary-row">
+            <!-- PWA Install Button - links -->
+            <div class="nav-pwa-container">
+              <PWAInstallButton />
+            </div>
+            
+            <!-- Search Container - midden -->
+            <div class="search-container">
+              <input
+                class="input"
+                name="text"
+                placeholder="Zoek..."
+                type="search"
+                v-model="searchQuery"
+              />
+            </div>
+            
+            <!-- User Dropdown - rechts -->
+            <div class="nav-user-section">
+              <div class="nav-user-dropdown" @click.stop>
+                <button @click="toggleUserDropdown" class="nav-user-btn">
+                  <span>{{ authStore.userName || authStore.userEmail }}</span>
+                  <svg 
+                    :class="{ 'rotate': showUserDropdown }" 
+                    width="16" 
+                    height="16" 
+                    fill="currentColor" 
+                    viewBox="0 0 16 16"
+                  >
+                    <path d="M8 11.5L3.5 7h9L8 11.5z"/>
+                  </svg>
+                </button>
+                
+                <div v-if="showUserDropdown" class="nav-dropdown-menu">
+                  <div class="nav-dropdown-header">
+                    <p class="nav-user-name">{{ authStore.userName }}</p>
+                    <p class="nav-user-email">{{ authStore.userEmail }}</p>
+                  </div>
+                  <div class="nav-dropdown-divider"></div>
+                  <button @click="handleLogout" class="nav-dropdown-item logout">
+                    Uitloggen
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -111,7 +241,7 @@ const navigateTo = (path) => {
             <h3>Navigatie</h3>
             <button @click="closeMobileMenu" class="close-btn">&times;</button>
           </div>
-
+          
           <div class="mobile-menu-items">
             <button
               v-for="item in navigationItems"
@@ -125,8 +255,30 @@ const navigateTo = (path) => {
                 <span class="mobile-nav-description">{{ item.description }}</span>
               </div>
             </button>
+            
+            <!-- Mobile Inbox Item -->
+            <button
+              @click="goToInbox"
+              :class="['mobile-nav-item', 'mobile-inbox-item', { 'active': isActiveRoute('/notifications') }]"
+            >
+              <span class="mobile-nav-icon">📧</span>
+              <div class="mobile-nav-content">
+                <span class="mobile-nav-text">{{ inboxDisplay }}</span>
+                <span class="mobile-nav-description">Berichten en notificaties</span>
+              </div>
+              <span v-if="unreadCount > 0" class="mobile-unread-badge">{{ unreadCount }}</span>
+            </button>
+            <div class="mobile-search-container">
+              <input
+                class="mobile-search-input"
+                name="text"
+                placeholder="Zoek..."
+                type="search"
+                v-model="searchQuery"
+              />
+            </div>
 
-            <!-- PWA Install Button for Mobile -->
+                          <!-- PWA Install Button for Mobile -->
             <div class="mobile-pwa-container">
               <PWAInstallButton />
             </div>
@@ -145,6 +297,12 @@ const navigateTo = (path) => {
 </template>
 
 <style scoped>
+main {
+  padding-top: 20px;
+  max-width: 100%;
+  margin: 0 auto;
+}
+
 .navigation-menu {
   position: relative;
 }
@@ -168,10 +326,10 @@ const navigateTo = (path) => {
 
 .nav-items {
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
   align-items: center;
   padding: 16px 0;
-  gap: 20px;
+  gap: 16px;
 }
 
 .nav-main-items {
@@ -221,14 +379,175 @@ const navigateTo = (path) => {
   font-size: 0.9em;
 }
 
+.inbox-item {
+  position: relative;
+}
+
+.unread-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: #dc2626;
+  color: white;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  font-size: 0.7em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+/* Rij 2: PWA, Search, User layout */
+.nav-secondary-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  max-width: 1200px;
+  gap: 40px;
+  padding: 0 60px;
+}
+
+.search-container {
+  flex: 1;
+  max-width: 400px;
+  min-width: 250px;
+}
+
+.search-container .input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 25px;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  font-size: 0.9em;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+.search-container .input::placeholder {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.search-container .input:focus {
+  outline: none;
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.5);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+}
+
+.nav-user-section {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.nav-user-dropdown {
+  position: relative;
+}
+
+.nav-user-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.nav-user-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.nav-user-btn svg {
+  transition: transform 0.2s;
+}
+
+.nav-user-btn svg.rotate {
+  transform: rotate(180deg);
+}
+
+
+.nav-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  min-width: 200px;
+  z-index: 1000;
+}
+
+.nav-dropdown-header {
+  padding: 12px 16px;
+}
+
+.nav-user-name {
+  font-weight: 500;
+  color: #1f2937;
+  margin: 0 0 4px 0;
+  font-size: 0.9em;
+}
+
+.nav-user-email {
+  color: #6b7280;
+  margin: 0;
+  font-size: 0.8em;
+}
+
+.nav-dropdown-divider {
+  height: 1px;
+  background: #e5e7eb;
+  margin: 0;
+}
+
+.nav-dropdown-item {
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 12px 16px;
+  color: #374151;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  font-size: 0.9em;
+}
+
+.nav-dropdown-item:hover {
+  background: #f9fafb;
+}
+
+.nav-dropdown-item.logout {
+  color: #dc2626;
+}
+
+.nav-dropdown-item.logout:hover {
+  background: #fef2f2;
+}
+
 .nav-pwa-container {
   display: flex;
   align-items: center;
+  justify-content: center;
   padding: 8px 16px;
   border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);
+  min-width: 120px;
+  flex-shrink: 0;
 }
 
 /* Mobile Navigation */
@@ -245,6 +564,7 @@ const navigateTo = (path) => {
   flex-direction: column;
   align-items: center;
   gap: 4px;
+  color:#3b82f6;
   background: white;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
@@ -404,6 +724,55 @@ const navigateTo = (path) => {
   color: #1d4ed8;
 }
 
+.mobile-inbox-item {
+  position: relative;
+}
+
+.mobile-inbox-item .mobile-unread-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: #dc2626;
+  color: white;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  font-size: 0.75em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  border: 2px solid white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.mobile-search-container {
+  padding: 16px;
+  border-top: 1px solid #e2e8f0;
+  margin-top: 8px;
+}
+
+.mobile-search-input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 25px;
+  background: white;
+  color: #374151;
+  font-size: 0.9em;
+  transition: all 0.3s ease;
+}
+
+.mobile-search-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.mobile-search-input::placeholder {
+  color: #9ca3af;
+}
+
 .mobile-pwa-container {
   padding: 16px;
   border-top: 1px solid #e2e8f0;
@@ -460,41 +829,69 @@ const navigateTo = (path) => {
   .desktop-nav {
     display: none;
   }
-
+  
   .mobile-nav {
     display: block;
   }
-
+  
   .floating-action {
     display: block;
   }
-
+  
   .nav-items {
     flex-direction: column;
     gap: 16px;
     padding: 16px;
   }
-
+  
   .nav-main-items {
     flex-direction: column;
     gap: 8px;
     width: 100%;
   }
-
+  
   .nav-item {
     min-width: auto;
     width: 100%;
     justify-content: flex-start;
     padding: 12px 16px;
   }
-
+  
+  .nav-secondary-row {
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 16px 0 0 0;
+  }
+  
+  .search-container {
+    width: 100%;
+    max-width: none;
+    order: 1;
+  }
+  
+  .nav-user-section {
+    order: 2;
+    width: 100%;
+    text-align: center;
+  }
+  
   .nav-pwa-container {
+    order: 3;
     width: 100%;
     justify-content: center;
-    margin-top: 8px;
-    border-top: 1px solid rgba(255, 255, 255, 0.2);
-    padding-top: 16px;
     background: rgba(255, 255, 255, 0.05);
+    padding: 12px;
+    border-radius: 8px;
+  }
+  
+  .nav-user-btn span {
+    display: none;
+  }
+  
+  .nav-dropdown-menu {
+    right: -10px;
   }
 }
 
@@ -503,9 +900,9 @@ const navigateTo = (path) => {
   .nav-item {
     padding: 14px 20px;
   }
-
+  
   .nav-text {
     font-size: 1em;
   }
 }
-</style>+
+</style>

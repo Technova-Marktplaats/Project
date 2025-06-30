@@ -1,7 +1,6 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { computed } from 'vue'
 import apiService from '../services/api'
 import cacheService from '../services/cache'
 import PWAInstallButton from './PWAInstallButton.vue'
@@ -20,11 +19,11 @@ let networkCleanup = null
 const fetchItems = async () => {
   loading.value = true
   error.value = null
-
+  
   try {
     const response = await apiService.items.getAll()
     console.log('API Response:', response.data)
-
+    
     // Check if response has wrapper structure (success, data, message)
     if (response.data.data && Array.isArray(response.data.data)) {
       items.value = response.data.data
@@ -34,7 +33,7 @@ const fetchItems = async () => {
       console.error('Unexpected response structure:', response.data)
       items.value = []
     }
-
+    
     // Cache items als ze succesvol zijn opgehaald
     if (items.value.length > 0) {
       await cacheService.cacheItems(items.value)
@@ -44,7 +43,7 @@ const fetchItems = async () => {
     console.error('Response data:', err.response?.data)
     console.error('Response status:', err.response?.status)
     console.error('Response headers:', err.response?.headers)
-
+    
     if (err.response?.status === 500) {
       error.value = 'Server fout (500): Controleer je Laravel logs. Mogelijk database of API endpoint probleem.'
     } else if (err.code === 'ECONNABORTED') {
@@ -71,11 +70,10 @@ const props = defineProps({
     default: ''
   }
 })
-
 onMounted(async () => {
   await fetchItems()
   await initializeCacheStatus()
-
+  
   // Monitor network changes
   networkCleanup = cacheService.onNetworkChange((status) => {
     isOffline.value = !status.online
@@ -106,9 +104,12 @@ const navigateToItem = (itemId) => {
   router.push(`/item/${itemId}`)
 }
 
-
 // Functie voor zoeken
 const filteredItems = computed(() => {
+  if (!props.search || props.search.trim() === '') {
+    return items.value
+  }
+  
   const query = props.search.toLowerCase()
   return items.value.filter(item =>
       item.title?.toLowerCase().includes(query) ||
@@ -117,20 +118,21 @@ const filteredItems = computed(() => {
   )
 })
 
+
 </script>
 
 <template>
   <div class="items-container">
     <div class="header">
       <h2>Items Overzicht</h2>
-
+      
       <div class="header-controls">
         <div class="status-indicators">
           <span v-if="isOffline" class="offline-indicator" title="Offline - cache wordt gebruikt">
             📡 Offline
           </span>
         </div>
-
+        
         <div class="header-actions">
           <button @click="fetchItems" :disabled="loading" class="refresh-btn">
             {{ loading ? 'Laden...' : 'Vernieuwen' }}
@@ -152,26 +154,31 @@ const filteredItems = computed(() => {
       <p>Geen items gevonden.</p>
     </div>
 
+    <div v-else-if="filteredItems.length === 0 && props.search" class="no-items">
+      <p>Geen items gevonden voor "{{ props.search }}".</p>
+      <p class="search-help">Probeer een andere zoekterm of check je spelling.</p>
+    </div>
+
     <div v-else class="items-grid">
-      <div
-          v-for="item in filteredItems"
-          :key="item.id"
-          class="item-card"
-          @click="navigateToItem(item.id)"
+      <div 
+        v-for="item in filteredItems" 
+        :key="item.id" 
+        class="item-card"
+        @click="navigateToItem(item.id)"
       >
         <div class="item-image">
-          <img
-              v-if="item.images && item.images.length > 0"
-              :src="item.images[0].url"
-              :alt="item.title"
-              class="item-img"
-              @error="onImageError"
+          <img 
+            v-if="item.images && item.images.length > 0" 
+            :src="item.images[0].url" 
+            :alt="item.title"
+            class="item-img"
+            @error="onImageError"
           />
           <div v-else class="no-image">
             <span>Geen afbeelding</span>
           </div>
         </div>
-
+        
         <div class="item-content">
           <h3>{{ item.title || 'Onbekend Item' }}</h3>
           <p v-if="item.description" class="description">{{ item.description }}</p>
@@ -282,6 +289,12 @@ const filteredItems = computed(() => {
   text-align: center;
   padding: 40px;
   color: #4a5568;
+}
+
+.search-help {
+  color: #718096;
+  font-size: 0.9em;
+  margin-top: 8px;
 }
 
 .error {
@@ -432,38 +445,36 @@ const filteredItems = computed(() => {
     gap: 15px;
     padding: 15px;
   }
-
+  
   .header h2 {
     text-align: center;
     margin-bottom: 10px;
   }
-
+  
   .header-controls {
     flex-direction: column;
     gap: 15px;
   }
-
+  
   .status-indicators {
     justify-content: center;
     flex-wrap: wrap;
   }
-
+  
   .header-actions {
     justify-content: center;
     flex-wrap: wrap;
     gap: 8px;
   }
-
+  
   .refresh-btn {
     min-width: 120px;
     padding: 10px 16px;
   }
-
+  
   .items-grid {
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 15px;
   }
 }
-
-
 </style>

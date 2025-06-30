@@ -1,7 +1,8 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAuthStore } from '../stores/auth.js'
+import { useAuthStore } from '../stores/auth'
+import { getGoogleRedirectUrl } from '../config/api'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -82,6 +83,37 @@ const handleSubmit = async () => {
     router.push('/')
   }
   // Errors worden automatisch getoond via de store
+}
+
+const handleGoogleLogin = async () => {
+  try {
+    const googleRedirectUrl = getGoogleRedirectUrl()
+    
+    const response = await fetch(googleRedirectUrl, {
+      method: 'GET',
+      credentials: 'include',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      }
+    })
+
+    if (!response.ok) {
+      throw new Error('Netwerk response was niet ok')
+    }
+
+    const data = await response.json()
+    
+    if (data.url) {
+      // Simpele redirect naar Google
+      window.location.href = data.url
+    } else {
+      throw new Error('Geen redirect URL ontvangen van de server')
+    }
+  } catch (error) {
+    console.error('Fout bij Google registratie:', error)
+    authStore.setError('Er is een fout opgetreden bij Google registratie')
+  }
 }
 
 const clearError = () => {
@@ -167,6 +199,19 @@ onMounted(() => {
           :disabled="authStore.loading"
         >
           {{ authStore.loading ? 'Bezig met registreren...' : 'Account aanmaken' }}
+        </button>
+
+        <div class="divider">
+          <span>of</span>
+        </div>
+
+        <button 
+          type="button" 
+          class="google-btn"
+          @click="handleGoogleLogin"
+        >
+          <img src="../assets/google-icon.svg" alt="Google" class="google-icon" />
+          Registreren met Google
         </button>
       </form>
 
@@ -310,6 +355,53 @@ onMounted(() => {
 
 .register-footer a:hover {
   text-decoration: underline;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 20px 0;
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.divider span {
+  padding: 0 10px;
+  color: #6b7280;
+  font-size: 0.9em;
+}
+
+.google-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: white;
+  color: #374151;
+  border: 2px solid #e5e7eb;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 1em;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.1s;
+  width: 100%;
+}
+
+.google-btn:hover {
+  background: #f9fafb;
+  transform: translateY(-1px);
+}
+
+.google-icon {
+  width: 20px;
+  height: 20px;
 }
 
 @media (max-width: 480px) {

@@ -3,10 +3,10 @@
 
 export const API_CONFIG = {
   // Hoofdinstellingen - verander dit om naar een andere server te wijzen
-  BASE_URL: 'http://laravelbackend.test/api/',
+  BASE_URL: 'http://localhost/LaravelBackend/public/api',
   
   // Algemene instellingen
-  TIMEOUT: 3000000, // 10 seconden
+  TIMEOUT: 10000, // 10 seconden
   
   // Standaard headers
   HEADERS: {
@@ -16,9 +16,14 @@ export const API_CONFIG = {
 
   // Environment specifieke configuraties
   ENVIRONMENTS: {
-    development: 'http://laravelbackend/LaravelBackend/public/api',
+    development: 'http://localhost/LaravelBackend/public/api',
     staging: 'http://staging.marktplaats.com/api', 
-    production: 'http://srv856957.hstgr.cloud/mp/api'
+    production: 'http://srv856957.hstgr.cloud/api'
+  },
+
+  // Google Auth endpoints
+  GOOGLE_AUTH: {
+    REDIRECT: '/auth/google/redirect'
   }
 }
 
@@ -35,4 +40,10 @@ export const setEnvironment = (env) => {
     return url
   }
   throw new Error(`Onbekende environment: ${env}`)
-} 
+}
+
+// Helper om Google auth redirect URL te krijgen
+export const getGoogleRedirectUrl = (environment = 'production') => {
+  const baseUrl = getApiUrl(environment)
+  return `${baseUrl}${API_CONFIG.GOOGLE_AUTH.REDIRECT}`
+}

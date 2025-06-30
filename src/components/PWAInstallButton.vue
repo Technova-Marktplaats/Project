@@ -11,17 +11,17 @@ const instructionsText = ref('')
 
 onMounted(async () => {
   console.log('🔍 PWA Install Button - Starting checks...')
-
+  
   // Check if PWA is already installed
   isPWAInstalled.value = cacheService.isPWAInstalled()
   console.log('📱 PWA already installed:', isPWAInstalled.value)
-
+  
   if (!isPWAInstalled.value) {
     // Check PWA criteria
     const isHTTPS = location.protocol === 'https:' || location.hostname === 'localhost'
     const hasServiceWorker = 'serviceWorker' in navigator
     const hasManifest = document.querySelector('link[rel="manifest"]')
-
+    
     // Test manifest loading
     if (hasManifest) {
       try {
@@ -32,21 +32,21 @@ onMounted(async () => {
         console.error('❌ Manifest loading failed:', error)
       }
     }
-
+    
     debugInfo.value = `HTTPS: ${isHTTPS}, SW: ${hasServiceWorker}, Manifest: ${!!hasManifest}`
     console.log('🔍 PWA Requirements:', debugInfo.value)
-
+    
     // Always show install button for testing
     showInstallButton.value = true
     console.log('🧪 Showing install button for testing')
-
+    
     if (isHTTPS && hasServiceWorker && hasManifest) {
       // Wait for install prompt in background
       try {
         console.log('⏳ Waiting for install prompt...')
         const prompt = await cacheService.getInstallPrompt()
         console.log('📱 Install prompt available:', !!prompt)
-
+        
         if (prompt) {
           console.log('✅ Real install prompt found!')
         }
@@ -61,13 +61,13 @@ onMounted(async () => {
 
 const installPWA = async () => {
   if (isInstalling.value) return
-
+  
   isInstalling.value = true
-
+  
   try {
     // Probeer eerst automatische installatie
     const result = await cacheService.triggerInstall()
-
+    
     if (result.success && result.installed) {
       showInstallButton.value = false
       isPWAInstalled.value = true
@@ -78,10 +78,10 @@ const installPWA = async () => {
       console.log('User declined PWA installation')
       return
     }
-
+    
     // Automatische installatie niet beschikbaar - toon handmatige instructies
     showManualInstallInstructions()
-
+    
   } catch (error) {
     console.error('PWA installation error:', error)
     showManualInstallInstructions()
@@ -93,7 +93,7 @@ const installPWA = async () => {
 const showManualInstallInstructions = () => {
   const userAgent = navigator.userAgent.toLowerCase()
   let instructions = ''
-
+  
   if (userAgent.includes('chrome') && !userAgent.includes('edg')) {
     instructions = `🔹 Google Chrome:
 1. Kijk in de adresbalk naar een installatie icoon (📱)
@@ -122,9 +122,9 @@ const showManualInstallInstructions = () => {
 2. Of zoek naar een installatie icoon in de adresbalk
 3. Sommige browsers ondersteunen PWA installatie niet volledig`
   }
-
+  
   instructions += '\n\n✨ Na installatie kun je de app gebruiken als een gewone desktop/mobiele app!'
-
+  
   instructionsText.value = instructions
   showInstructionsModal.value = true
 }
@@ -136,22 +136,22 @@ const closeInstructionsModal = () => {
 
 <template>
   <div v-if="showInstallButton && !isPWAInstalled" class="pwa-install-container">
-    <button
-        @click="installPWA"
-        :disabled="isInstalling"
-        class="pwa-install-btn"
-        title="Installeer als desktop app"
+    <button 
+      @click="installPWA" 
+      :disabled="isInstalling"
+      class="pwa-install-btn"
+      title="Installeer als desktop app"
     >
       <span class="install-icon">📱</span>
       <span>{{ isInstalling ? 'Installeren...' : 'Installeer als App' }}</span>
     </button>
   </div>
-
+  
   <div v-else-if="isPWAInstalled" class="pwa-installed-indicator">
     <span class="installed-icon">✅</span>
     <span>App geïnstalleerd</span>
   </div>
-
+  
   <!-- Debug info (remove in production) -->
   <div v-else class="pwa-debug-info">
     <small>🔍 PWA Debug: {{ debugInfo }}</small>
@@ -347,14 +347,14 @@ const closeInstructionsModal = () => {
     font-size: 0.85em;
     padding: 10px 20px;
   }
-
+  
   .modal-content {
     width: 95%;
     margin: 10px;
   }
-
+  
   .modal-header, .modal-body, .modal-footer {
     padding: 15px;
   }
 }
-</style>
+</style> 
