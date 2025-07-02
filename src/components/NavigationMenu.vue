@@ -268,6 +268,22 @@ onUnmounted(() => {
               </div>
               <span v-if="unreadCount > 0" class="mobile-unread-badge">{{ unreadCount }}</span>
             </button>
+
+            <!-- Mobile User Info and Logout -->
+            <div class="mobile-user-section">
+              <div class="mobile-user-info">
+                <span class="mobile-user-name">{{ authStore.userName }}</span>
+                <span class="mobile-user-email">{{ authStore.userEmail }}</span>
+              </div>
+              <button @click="handleLogout" class="mobile-logout-btn">
+                <span class="mobile-nav-icon">🚪</span>
+                <div class="mobile-nav-content">
+                  <span class="mobile-nav-text">Uitloggen</span>
+                  <span class="mobile-nav-description">Account uitloggen</span>
+                </div>
+              </button>
+            </div>
+
             <div class="mobile-search-container">
               <input
                 class="mobile-search-input"
@@ -771,6 +787,63 @@ main {
 
 .mobile-search-input::placeholder {
   color: #9ca3af;
+}
+
+.mobile-user-section {
+  padding: 16px;
+  border-top: 1px solid #e2e8f0;
+  margin-top: 8px;
+  background: #f8fafc;
+  border-radius: 12px;
+  margin-bottom: 8px;
+}
+
+.mobile-user-info {
+  display: flex;
+  flex-direction: column;
+  padding: 12px 16px;
+  margin-bottom: 8px;
+}
+
+.mobile-user-name {
+  font-weight: 600;
+  color: #1f2937;
+  font-size: 0.95em;
+  margin-bottom: 2px;
+}
+
+.mobile-user-email {
+  color: #6b7280;
+  font-size: 0.85em;
+}
+
+.mobile-logout-btn {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  padding: 12px 16px;
+  background: none;
+  border: 1px solid #dc2626;
+  border-radius: 8px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #dc2626;
+}
+
+.mobile-logout-btn:hover {
+  background: #fef2f2;
+  border-color: #b91c1c;
+}
+
+.mobile-logout-btn .mobile-nav-text {
+  color: #dc2626;
+  font-weight: 500;
+}
+
+.mobile-logout-btn .mobile-nav-description {
+  color: #f87171;
 }
 
 .mobile-pwa-container {
