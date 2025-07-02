@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted, nextTick, watch } from 'vue'
 import { useAuthStore } from '../stores/auth'
+import apiService from '../services/api'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
@@ -99,36 +100,30 @@ const updateProfile = async () => {
   message.value = ''
 
   try {
-    const response = await fetch('http://localhost/LaravelBackend/public/api/profile', {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authStore.token}`,
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify({
-        name: formData.value.name,
-        location_lat: formData.value.location_lat,
-        location_lon: formData.value.location_lon
-      })
+    const response = await apiService.profile.update({
+      name: formData.value.name,
+      location_lat: formData.value.location_lat,
+      location_lon: formData.value.location_lon
     })
 
-    const data = await response.json()
-
-    if (response.ok) {
-      // Update user data in store
-      authStore.setUser(data.user)
-      message.value = 'Profiel succesvol bijgewerkt!'
-      
-      setTimeout(() => {
-        message.value = ''
-      }, 3000)
-    } else {
-      error.value = data.message || 'Er is een fout opgetreden'
-    }
+    // Update user data in store
+    authStore.setUser(response.data.user)
+    message.value = 'Profiel succesvol bijgewerkt!'
+    
+    setTimeout(() => {
+      message.value = ''
+    }, 3000)
   } catch (err) {
     console.error('Profile update error:', err)
-    error.value = 'Er is een fout opgetreden bij het bijwerken van je profiel'
+    if (err.response?.data?.message) {
+      error.value = err.response.data.message
+    } else if (err.response?.data?.errors) {
+      // Handle validation errors
+      const errors = Object.values(err.response.data.errors).flat()
+      error.value = errors.join(', ')
+    } else {
+      error.value = 'Er is een fout opgetreden bij het bijwerken van je profiel'
+    }
   } finally {
     loading.value = false
   }

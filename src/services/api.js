@@ -112,6 +112,11 @@ export const apiService = {
     markAsRead: (id) => apiClient.put(`/notifications/${id}/read`)
   },
 
+  // Profile endpoints
+  profile: {
+    update: (profileData) => apiClient.put('/profile', profileData)
+  },
+
   // Utility functions
   getCurrentApiUrl: () => API_CONFIG.BASE_URL,
   updateApiBaseUrl: (newUrl) => {
