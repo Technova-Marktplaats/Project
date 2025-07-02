@@ -60,11 +60,31 @@ const handleSubmit = async () => {
   // Errors worden automatisch getoond via de store
 }
 
-const handleGoogleLogin = () => {
+const handleGoogleLogin = async () => {
   try {
-    const googleRedirectUrl = getGoogleRedirectUrl()
-    // Direct redirect - no fetch needed
-    window.location.href = googleRedirectUrl
+    const googleRedirectEndpoint = getGoogleRedirectUrl()
+    
+    // Fetch the Google OAuth URL from the backend
+    const response = await fetch(googleRedirectEndpoint, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      }
+    })
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    
+    const data = await response.json()
+    
+    // Redirect to the Google OAuth URL
+    if (data.url) {
+      window.location.href = data.url
+    } else {
+      throw new Error('Geen Google OAuth URL ontvangen van de server')
+    }
   } catch (error) {
     console.error('Fout bij Google login:', error)
     authStore.setError('Er is een fout opgetreden bij Google login')
