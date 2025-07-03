@@ -14,28 +14,59 @@ onMounted(async () => {
   const userEncoded = urlParams.get('user')
   const error = urlParams.get('error')
 
+  console.log('AuthCallback URL parameters:', { success, token, userEncoded, error })
+  console.log('Full URL:', window.location.href)
+
   if (success === 'true' && token && userEncoded) {
     try {
       // Decodeer user data
       const userData = JSON.parse(atob(userEncoded))
       
+      console.log('Google OAuth callback data:', { token, userData })
+      
       // Sla token en user data op in de auth store
       authStore.setToken(token)
       authStore.setUser(userData)
       
-      // Redirect naar home pagina
-      router.push('/')
+      // Wacht even om zeker te zijn dat de auth store is bijgewerkt
+      await new Promise(resolve => setTimeout(resolve, 100))
+      
+      // Controleer of de gebruiker nu ingelogd is
+      if (authStore.isLoggedIn) {
+        console.log('Gebruiker succesvol ingelogd via Google OAuth')
+        // Kleine vertraging om zeker te zijn dat alles is verwerkt
+        setTimeout(() => {
+          router.push('/')
+        }, 250)
+      } else {
+        console.error('Auth store niet correct bijgewerkt na Google OAuth')
+        console.error('Auth store state:', {
+          token: authStore.token,
+          user: authStore.user,
+          isLoggedIn: authStore.isLoggedIn,
+          isAuthenticated: authStore.isAuthenticated
+        })
+        throw new Error('Auth store niet correct bijgewerkt')
+      }
     } catch (err) {
       console.error('Fout bij verwerken van Google login data:', err)
       authStore.setError('Er is een fout opgetreden bij het verwerken van de login gegevens')
       router.push('/login')
     }
+  } else if (success === 'false' && error) {
+    // Specifieke error van de server
+    console.error('Google OAuth server error:', error)
+    authStore.setError(error)
+    router.push('/login')
   } else if (error) {
-    // Toon error en redirect naar login
+    // Algemene error
+    console.error('Google OAuth error:', error)
     authStore.setError(error)
     router.push('/login')
   } else {
     // Geen geldige parameters, redirect naar login
+    console.error('Geen geldige OAuth parameters ontvangen')
+    authStore.setError('Geen geldige login gegevens ontvangen van Google')
     router.push('/login')
   }
 })
