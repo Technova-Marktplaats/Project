@@ -252,7 +252,7 @@ onMounted(async () => {
               <div class="location-icon">📍</div>
               <div class="location-info">
                 <strong>Locatie gedeeld</strong>
-                <span>Lat: {{ formData.location_lat.toFixed(6) }}, Lon: {{ formData.location_lon.toFixed(6) }}</span>
+                <span>Lat: {{ (parseFloat(formData.location_lat) || 0).toFixed(6) }}, Lon: {{ (parseFloat(formData.location_lon) || 0).toFixed(6) }}</span>
               </div>
               <button 
                 type="button" 
