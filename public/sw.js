@@ -103,6 +103,13 @@ self.addEventListener('fetch', (event) => {
     return
   }
   
+  // --- Special handling: Google OAuth callback route should load the SPA ---
+  // We want the SPA (AuthCallback.vue) to handle this route, so treat it as navigation
+  if (url.pathname.startsWith('/api/auth/google/callback')) {
+    event.respondWith(handleNavigationRequest(event.request))
+    return
+  }
+  
   // API requests - Cache First strategie
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(handleApiRequest(event.request))

@@ -37,6 +37,12 @@ const routes = [
     meta: { requiresGuest: true } // Google OAuth callback
   },
   {
+    path: '/api/auth/google/callback',
+    name: 'AuthCallbackApi',
+    component: AuthCallback,
+    meta: { requiresGuest: true } // Google OAuth callback (backend route)
+  },
+  {
     path: '/',
     name: 'Items',
     component: Items,
